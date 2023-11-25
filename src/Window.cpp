@@ -61,6 +61,32 @@ Window::Window(int width, int height, const char* name)
     ImGui_ImplGlfw_InitForOpenGL(glfwWindow, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
 
+    glfwSetWindowUserPointer(glfwWindow, this); // Set User Pointer
+
+    addKeyCallback([this](int key, int scancode, int action, int mods)
+        {
+            if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+                glfwSetWindowShouldClose(glfwWindow, true);
+        });
+
+    glfwSetKeyCallback(glfwWindow, [](GLFWwindow* window, int key, int scancode, int action, int mods)
+        {
+            Window* win = (Window*)glfwGetWindowUserPointer(window);
+            win->keyCallback(key, scancode, action, mods);
+        });
+
+    glfwSetCursorPosCallback(glfwWindow, [](GLFWwindow* window, double xpos, double ypos)
+        {
+            Window* win = (Window*)glfwGetWindowUserPointer(window);
+            win->mouseMoveCallback(xpos, ypos);
+        });
+
+    glfwSetFramebufferSizeCallback(glfwWindow, [](GLFWwindow* window, int width, int height)
+        {
+            Window* win = (Window*)glfwGetWindowUserPointer(window);
+            win->resizeCallback(width, height);
+        }); // Set Resize Callback
+
     // Setup fullscreen quad 
     unsigned int quadVBO;
     glGenVertexArrays(1, &quadVAO);
@@ -93,6 +119,40 @@ void Window::updateTexture()
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, &data[0]);
 }
 
+int Window::addKeyCallback(const KeyCallback callback)
+{
+    keyCallbacks.push_back(std::make_pair(true, callback));
+    return keyCallbacks.size() - 1;
+}
+int Window::activateKeyCallback(int id)
+{
+    if (id >= keyCallbacks.size()) return -1;
+    keyCallbacks[id].first = true;
+    return id;
+}
+int Window::deactivateKeyCallback(int id)
+{
+    if (id >= keyCallbacks.size()) return -1;
+    keyCallbacks[id].first = false;
+    return id;
+}
+int Window::addMouseMoveCallback(const MouseMoveCallback callback)
+{
+    mouseMoveCallbacks.push_back(std::make_pair(true, callback));
+    return keyCallbacks.size() - 1;
+}
+int Window::activateMouseMoveCallback(int id)
+{
+    if (id >= mouseMoveCallbacks.size()) return -1;
+    mouseMoveCallbacks[id].first = true;
+    return id;
+}
+int Window::deactivateMouseMoveCallback(int id)
+{
+    if (id >= mouseMoveCallbacks.size()) return -1;
+    mouseMoveCallbacks[id].first = false;
+    return id;
+}
 
 void Window::renderLoop()
 {
@@ -116,13 +176,15 @@ void Window::renderLoop()
         // Rendering
         ImGui::Render();
 
-        // Resizing (Can be moved)
-        int display_w, display_h;
-        glfwGetFramebufferSize(glfwWindow, &display_w, &display_h);
-        glViewport(0, 0, display_w, display_h);
-
         glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT);
+
+        //-----------------------------
+
+        // Camera and Dispaly objects should be passed references to io and data
+        // Changes to data will be reflected in the updateTexture() call
+
+        //----------------------------
 
         updateTexture();
         glBindVertexArray(quadVAO);
@@ -177,4 +239,24 @@ void Window::displayGUI(ImGuiIO& io)
 
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
     ImGui::End();
+}
+
+void Window::keyCallback(int key, int scancode, int action, int mods)
+{
+    for (auto callback : keyCallbacks)
+        if (callback.first)
+            callback.second(key, scancode, action, mods);
+}
+
+void Window::mouseMoveCallback(double xpos, double ypos)
+{
+    for (auto callback : mouseMoveCallbacks)
+        if (callback.first)
+            callback.second(xpos, ypos);
+}
+
+void Window::resizeCallback(int width, int height)
+{
+    glViewport(0, 0, width, height);
+    // currentCamera->setAspectRatio((float)width / height);
 }

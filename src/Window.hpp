@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <unordered_map>
+#include <functional>
 
 #include "ImGui/imgui.h"
 #include "ImGui/imgui_impl_glfw.h"
@@ -12,16 +13,36 @@
 
 #include "Shader.hpp"
 
+typedef const std::function<void(int key, int scancode, int action, int mods)> KeyCallback;
+typedef const std::function<void(double xpos, double ypos)> MouseMoveCallback;
+
 class Window
 {
 public:
 	Window(int width, int height, const char* name);
 
-    void updateTexture();
+    int addKeyCallback(const KeyCallback callback);
+
+    int activateKeyCallback(int id);
+
+    int deactivateKeyCallback(int id);
+
+    int addMouseMoveCallback(const MouseMoveCallback callback);
+
+    int activateMouseMoveCallback(int id);
+
+    int deactivateMouseMoveCallback(int id);
 
 	void renderLoop();
 private:
 	GLFWwindow* glfwWindow;
+
+    std::vector<std::pair<bool, KeyCallback>> keyCallbacks;
+    std::vector<std::pair<bool, MouseMoveCallback>> mouseMoveCallbacks;
+
+    void keyCallback(int key, int scancode, int action, int mods);
+    void mouseMoveCallback(double xpos, double ypos);
+    void resizeCallback(int width, int height);
 
     Shader* screenShader;
     unsigned int quadVAO{ 0 };
@@ -41,6 +62,8 @@ private:
          1.0f,  1.0f,  1.0f, 1.0f
     };
 
+    void updateTexture();
+
     // Camera* currentCamera;
     // std::unordered_map<const char*, Camera*> cameraMap;
 
@@ -52,4 +75,5 @@ private:
 
     // GUI functions
     void displayGUI(ImGuiIO& io);
+    
 };
