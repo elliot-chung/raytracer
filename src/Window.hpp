@@ -43,6 +43,8 @@ public:
 
     int deactivateMouseMoveCallback(int id);
 
+    void clearColorData();
+
 	void renderLoop();
 private:
 	GLFWwindow* glfwWindow;
@@ -59,7 +61,7 @@ private:
     unsigned int quadTexture{ 0 };
 
     int width, height;
-    std::vector<unsigned char> data;
+    std::vector<float> data;
 
     float quadVertices[24] = {
         // positions   // texCoords

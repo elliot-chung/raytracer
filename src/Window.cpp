@@ -104,7 +104,7 @@ Window::Window(int width, int height, const char* name)
     screenShader->setInt("screenTexture", 0);
 
     // Initialize Data
-    data = std::vector<unsigned char>(width * height * 3, 255);
+    clearColorData();
 
     // generate texture  
     glGenTextures(1, &quadTexture);
@@ -117,7 +117,7 @@ Window::Window(int width, int height, const char* name)
 
 void Window::updateTexture()
 {
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, &data[0]);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_FLOAT, &data[0]);
 }
 
 int Window::addKeyCallback(const KeyCallback callback)
@@ -153,6 +153,11 @@ int Window::deactivateMouseMoveCallback(int id)
     if (id >= mouseMoveCallbacks.size()) return -1;
     mouseMoveCallbacks[id].first = false;
     return id;
+}
+
+void Window::clearColorData()
+{
+    data = std::vector<float>(width * height * 3, 0.5f);
 }
 
 void Window::renderLoop()
@@ -250,7 +255,7 @@ void Window::displayGUI(ImGuiIO& io)
 
     if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
     {
-        memset(&data[counter * 800 * 3], 0, 400 * 3);
+        memset(&data[counter * width * 3], 0.0f, height * 3);
         counter++;
     }
     ImGui::SameLine();
@@ -279,6 +284,6 @@ void Window::resizeCallback(int width, int height)
     glViewport(0, 0, width, height);
     this->width = width;
     this->height = height;
-    data = std::vector<unsigned char>(width * height * 3, 255);
+    clearColorData();
     recalculateRayDirections = true;
 }
