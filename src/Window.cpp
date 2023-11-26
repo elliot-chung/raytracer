@@ -15,7 +15,7 @@ Window::Window(int width, int height, const char* name)
     //glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // Mac
 
     // Create window with graphics context
-    glfwWindow = glfwCreateWindow(1280, 720, "Raytracer", nullptr, nullptr);
+    glfwWindow = glfwCreateWindow(width, height, "Raytracer", nullptr, nullptr);
     if (glfwWindow == nullptr)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -31,8 +31,9 @@ Window::Window(int width, int height, const char* name)
         throw "Failed to initialize GLAD";
     }
 
-    static Shader shader("src/shaders/vert.shader", "src/shaders/frag.shader");
-    screenShader = &shader;
+    screenShader = std::make_unique<Shader>("src/shaders/vert.shader", "src/shaders/frag.shader");
+
+    camera = std::make_unique<Camera>(CAMERA_START_POS, glm::quat(), CAMERA_START_FOV);
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -156,7 +157,11 @@ int Window::deactivateMouseMoveCallback(int id)
 
 void Window::renderLoop()
 {
+    // Cached values used between renders
     ImGuiIO& io = ImGui::GetIO();
+    glm::vec3 prevCamPos(1.0f);
+    glm::quat prevCamRot;
+    std::vector<glm::vec3> rays;
     while (!glfwWindowShouldClose(glfwWindow))
     {
         // Poll and handle events (inputs, window resize, etc.)
@@ -181,8 +186,18 @@ void Window::renderLoop()
 
         //-----------------------------
 
-        // Camera and Dispaly objects should be passed references to io and data
-        // Changes to data will be reflected in the updateTexture() call
+        glm::vec3 currentCamPos = camera->getPosition();
+        glm::quat currentCamRot = camera->getRotation();
+        bool camChanged = currentCamPos != prevCamPos && currentCamRot != prevCamRot;
+        if (camChanged || recalculateRayDirections)
+        {
+            rays = camera->getRays(width, height);
+            recalculateRayDirections = false;
+        }
+        prevCamPos = camera->getPosition();
+        prevCamRot = camera->getRotation();
+
+
 
         //----------------------------
 
@@ -206,6 +221,10 @@ void Window::renderLoop()
 
         glfwSwapBuffers(glfwWindow);
     }
+}
+
+Window::~Window()
+{
     // Cleanup
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
@@ -231,7 +250,7 @@ void Window::displayGUI(ImGuiIO& io)
 
     if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
     {
-        memset(&data[counter * 800 * 3], 0, 800 * 3);
+        memset(&data[counter * 800 * 3], 0, 400 * 3);
         counter++;
     }
     ImGui::SameLine();
@@ -258,5 +277,8 @@ void Window::mouseMoveCallback(double xpos, double ypos)
 void Window::resizeCallback(int width, int height)
 {
     glViewport(0, 0, width, height);
-    // currentCamera->setAspectRatio((float)width / height);
+    this->width = width;
+    this->height = height;
+    data = std::vector<unsigned char>(width * height * 3, 255);
+    recalculateRayDirections = true;
 }
