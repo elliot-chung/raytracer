@@ -14,6 +14,8 @@
 
 #include "Shader.hpp"
 #include "Camera.hpp"
+#include "Scene.hpp"
+#include "Cube.hpp"
 
 #include "glm/gtx/string_cast.hpp"
 
@@ -78,7 +80,7 @@ private:
 
     std::unique_ptr<Camera> camera;
 
-    // std::unordered_map<const char*, DisplayObject*> objectMap;
+    std::unique_ptr<Scene> scene;
 
     // State
     bool show_demo_window = false;

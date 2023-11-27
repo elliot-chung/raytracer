@@ -15,7 +15,7 @@ Window::Window(int width, int height, const char* name)
     //glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // Mac
 
     // Create window with graphics context
-    glfwWindow = glfwCreateWindow(width, height, "Raytracer", nullptr, nullptr);
+    glfwWindow = glfwCreateWindow(width, height, name, nullptr, nullptr);
     if (glfwWindow == nullptr)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -115,7 +115,7 @@ Window::Window(int width, int height, const char* name)
     updateTexture();
 }
 
-void Window::updateTexture()
+inline void Window::updateTexture()
 {
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_FLOAT, &data[0]);
 }

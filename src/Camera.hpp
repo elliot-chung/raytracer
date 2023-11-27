@@ -64,10 +64,10 @@ public:
         return output;
     }
 
-    glm::vec3 getPosition() { return Position; }
-    glm::quat getRotation() { return Rotation; }
-    void setPosition(glm::vec3 position) { Position = position; }
-    void setRotation(glm::quat rotation) { Rotation = rotation; }
+    inline glm::vec3 getPosition() { return Position; }
+    inline glm::quat getRotation() { return Rotation; }
+    inline void setPosition(glm::vec3 position) { Position = position; }
+    inline void setRotation(glm::quat rotation) { Rotation = rotation; }
 private:
     glm::vec3 Position;
     glm::quat Rotation;
