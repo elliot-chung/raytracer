@@ -16,6 +16,7 @@
 #include "Camera.hpp"
 #include "Scene.hpp"
 #include "Cube.hpp"
+#include "processor/CPU/CPURaytracer.hpp"
 
 #include "glm/gtx/string_cast.hpp"
 
@@ -59,6 +60,9 @@ private:
     void resizeCallback(int width, int height);
 
     std::unique_ptr<Shader> screenShader;
+    std::unique_ptr<Camera> camera;
+    std::shared_ptr<Scene> scene;
+
     unsigned int quadVAO{ 0 };
     unsigned int quadTexture{ 0 };
 
@@ -77,10 +81,6 @@ private:
     };
 
     void updateTexture();
-
-    std::unique_ptr<Camera> camera;
-
-    std::unique_ptr<Scene> scene;
 
     // State
     bool show_demo_window = false;

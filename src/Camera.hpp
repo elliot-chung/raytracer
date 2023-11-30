@@ -14,6 +14,7 @@ class Camera
 public:
     Camera(glm::vec3& position, glm::quat& rotation, float fov) : Position(position), Rotation(rotation), verticalFOV(fov) { }
 
+    // TODO: Move this to the ray tracing backend
     std::vector<glm::vec3> getRays(int width, int height)
     {
         static int sWidth = width;

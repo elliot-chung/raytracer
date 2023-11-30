@@ -31,9 +31,11 @@ Window::Window(int width, int height, const char* name)
         throw "Failed to initialize GLAD";
     }
 
+    // Make unique object pointers
     screenShader = std::make_unique<Shader>("src/shaders/vert.shader", "src/shaders/frag.shader");
-
     camera = std::make_unique<Camera>(CAMERA_START_POS, glm::quat(), CAMERA_START_FOV);
+    scene = std::make_shared<Scene>();
+
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -162,6 +164,12 @@ void Window::clearColorData()
 
 void Window::renderLoop()
 {
+    auto backend = CPURaytracer();
+    Raytracer* raytracer = &backend;
+
+    Cube cube;
+    scene->addToScene("cube", &cube);
+
     // Cached values used between renders
     ImGuiIO& io = ImGui::GetIO();
     glm::vec3 prevCamPos(1.0f);
@@ -191,6 +199,7 @@ void Window::renderLoop()
 
         //-----------------------------
 
+        // Camera Update
         glm::vec3 currentCamPos = camera->getPosition();
         glm::quat currentCamRot = camera->getRotation();
         bool camChanged = currentCamPos != prevCamPos && currentCamRot != prevCamRot;
@@ -202,7 +211,10 @@ void Window::renderLoop()
         prevCamPos = camera->getPosition();
         prevCamRot = camera->getRotation();
 
+        // Scene Update
+        scene->update();
 
+        data = raytracer->trace(scene, rays, currentCamPos);
 
         //----------------------------
 

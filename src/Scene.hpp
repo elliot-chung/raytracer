@@ -6,13 +6,10 @@
 class Scene
 {
 public:
+	typedef std::unordered_map<const char*, DisplayObject*> ObjectMap;
 	bool addToScene(const char* name, DisplayObject* object)
 	{
-		try
-		{
-			auto _ = objectMap.at(name);
-		}
-		catch (int x)
+		if (objectMap.find(name) == objectMap.end())
 		{
 			objectMap[name] = object;
 			return true;
@@ -25,15 +22,16 @@ public:
 		return (bool) objectMap.erase(name);
 	}
 
-	std::vector<DisplayObject*> getAllObjects()
+	void update()
 	{
-		std::vector<DisplayObject*> output(objectMap.size(), 0);
-		int i = 0;
-		for (const auto& [_, value] : objectMap)
-			output[i++] = value;
-		return output;
+		for (auto& object : objectMap)
+		{
+			object.second->update();
+		}
 	}
+
+	inline ObjectMap& getObjects() { return objectMap; }
 	
 private:
-	std::unordered_map<const char*, DisplayObject*> objectMap;
+	ObjectMap objectMap = {};
 };

@@ -10,7 +10,7 @@
 class DisplayObject
 {
 public:
-	DisplayObject(glm::vec3 position = {}, glm::quat rotation = {}, glm::vec3 scale = {})
+	DisplayObject(glm::vec3 position = {}, glm::quat rotation = {}, glm::vec3 scale = {}) : minBound(0.0f), maxBound(0.0f)
 	{
 		Position = position;
 		Rotation = rotation;
@@ -26,15 +26,19 @@ public:
 		return model;
 	}
 
-	inline void setPosition(glm::vec3 position) { Position = position; }
-	inline void setRotation(glm::quat rotation) { Rotation = rotation; }
-	inline void setScale(glm::vec3 scale)		{ Scale = scale; }
+	virtual void update() {}
+
+	inline void setPosition(glm::vec3 position)		{ Position = position; }
+	inline void setRotation(glm::quat rotation)		{ Rotation = rotation; }
+	inline void setScale(glm::vec3 scale)			{ Scale = scale; }
+	inline void setMaterialName(std::string name)	{ materialName = name; }
 
 	inline glm::vec3 getMinBound() { return minBound; }
 	inline glm::vec3 getMaxBound() { return maxBound; }
 
 	inline Mesh* getMesh() { return mesh; }
-	inline int getMaterialIndex() { return materialIndex; }
+	inline std::string getMaterialName() { return materialName; }
+	inline void setMaterialName(std::string& name) { materialName = name; } 
 protected:
 	glm::vec3 Position;
 	glm::quat Rotation;
@@ -44,5 +48,5 @@ protected:
 	glm::vec3 maxBound;
 
 	Mesh* mesh = 0;
-	int materialIndex = -1;
+	std::string materialName = "";
 };

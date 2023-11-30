@@ -137,6 +137,7 @@
     <ClCompile Include="src\imgui\imgui_tables.cpp" />
     <ClCompile Include="src\imgui\imgui_widgets.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\Material.cpp" />
     <ClCompile Include="src\processor\CPU\CPURaytracer.cpp" />
     <ClCompile Include="src\processor\CPU\CPURaytracer.hpp" />
     <ClCompile Include="src\Window.cpp" />
@@ -401,6 +402,7 @@
     <ClInclude Include="src\imgui\imstb_rectpack.h" />
     <ClInclude Include="src\imgui\imstb_textedit.h" />
     <ClInclude Include="src\imgui\imstb_truetype.h" />
+    <ClInclude Include="src\Material.hpp" />
     <ClInclude Include="src\Mesh.hpp" />
     <ClInclude Include="src\processor\Raytracer.hpp" />
     <ClInclude Include="src\Scene.hpp" />
