@@ -7,6 +7,7 @@
 
 #include "../Scene.hpp"
 #include "../Camera.hpp"
+#include "../Material.hpp"
 
 
 struct RayHit
@@ -14,6 +15,8 @@ struct RayHit
 	glm::vec3 hitPosition;
 	float distance;
 	glm::vec2 uv;
+
+	std::string material;
 
 	glm::vec3 normal;
 	glm::vec3 albedo;
@@ -47,5 +50,5 @@ protected:
 	int bounceCount = 0;
 	float maxDistance = 0.0f;
 
-	float aoIntensity = 0.03;
+	float aoIntensity = 0.1;
 };

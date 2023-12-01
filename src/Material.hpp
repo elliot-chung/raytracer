@@ -38,7 +38,6 @@ private:
 	static TextureMap textureMap;
 };
 
-TextureMap Texture::textureMap = {};
 
 
 
@@ -61,6 +60,7 @@ public:
 	float getMetal(float x, float y);
 	glm::vec3 getAmbientOcclusion(float x, float y);
 	glm::vec3 getEmissionColor(float x, float y);
+	inline float getEmissionStrength() { return emissionStrength; }
 
 	bool setNormalTexture(const char *path);
 	bool setAlbedoTexture(const char* path);
@@ -69,7 +69,7 @@ public:
 	bool setAmbientOcclusionTexture(const char* path);
 	bool setEmissionTexture(const char* path);
 
-	inline static Material* getMaterial(char const* name) { return materialMap[name]; }
+	inline static Material* getMaterial(std::string& name) { return materialMap[name]; }
 
 private:
 	const glm::vec3 NORMAL = glm::vec3(0.0f, 0.0f, 1.0f);
@@ -96,5 +96,5 @@ private:
 	static MaterialMap materialMap;
 };
 
-MaterialMap Material::materialMap = {};
+
 

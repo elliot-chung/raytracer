@@ -16,6 +16,7 @@
 #include "Camera.hpp"
 #include "Scene.hpp"
 #include "Cube.hpp"
+#include "Material.hpp"
 #include "processor/CPU/CPURaytracer.hpp"
 
 #include "glm/gtx/string_cast.hpp"

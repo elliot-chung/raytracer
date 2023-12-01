@@ -169,11 +169,16 @@ void Window::renderLoop()
     Raytracer* raytracer = &backend;
     raytracer->setMaxDistance(100.0f);
 
+    Material mat1("redmat", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), 1.0f);
+    Material mat2("bluemat", glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), 1.0f);
+
     Cube cube(glm::vec3(0.0f, -1.0f, 0.0f), glm::quat(), glm::vec3(100.0f, 1.0f, 100.0f));
     scene->addToScene("cube", &cube);
+    cube.setMaterialName("redmat");
 
     Cube cube2;
     scene->addToScene("cube2", &cube2);
+    cube2.setMaterialName("bluemat");
 
     // Cached values used between renders
     ImGuiIO& io = ImGui::GetIO();

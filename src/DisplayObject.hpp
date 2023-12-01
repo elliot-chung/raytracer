@@ -34,9 +34,9 @@ public:
 
 	virtual void update(ImGuiIO& io) {}
 
-	inline void setPosition(glm::vec3 position)		{ Position = position; }
-	inline void setRotation(glm::quat rotation)		{ Rotation = rotation; }
-	inline void setScale(glm::vec3 scale)			{ Scale = scale; }
+	inline void setPosition(glm::vec3 position)		{ Position = position; setBounds(); }
+	inline void setRotation(glm::quat rotation)		{ Rotation = rotation; setBounds(); }
+	inline void setScale(glm::vec3 scale)			{ Scale = scale; setBounds(); }
 	inline void setMaterialName(std::string name)	{ materialName = name; }
 
 	inline glm::vec3 getMinBound() { return minBound; }
@@ -56,4 +56,10 @@ protected:
 
 	Mesh* mesh = 0;
 	std::string materialName = "";
+
+	void setBounds() {
+		glm::mat4 model = getModelMatrix();
+		minBound = model * glm::vec4(mesh->getMinBound(), 1.0f);
+		maxBound = model * glm::vec4(mesh->getMaxBound(), 1.0f);
+	}
 };

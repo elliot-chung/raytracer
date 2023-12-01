@@ -3,6 +3,10 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
+TextureMap Texture::textureMap = {};
+
+MaterialMap Material::materialMap = {};
+
 Material::Material(char const* name, glm::vec4 albedo, float roughness,
 	float metal, glm::vec3 emissionColor, float emission)
 {

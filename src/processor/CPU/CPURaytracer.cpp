@@ -1,7 +1,7 @@
 #include "CPURaytracer.hpp"
 
 #include <iostream>
-#include "glm/gtx/string_cast.hpp"
+#include <glm/gtx/string_cast.hpp>
 
 std::vector<float> CPURaytracer::trace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera> camera)
 {
@@ -44,16 +44,14 @@ Color CPURaytracer::singleTrace(Ray& ray, const Scene::ObjectMap& objects)
 
 	Color outgoingLight(0.1, 0.1, 0.1);       // Slight skylight
 
-	if (ray.didHit)  // Get the ambient light values from the hit location
-	{
-		glm::vec3 aoVec(aoIntensity);
-		// outgoingLight = ray.hitInfo.albedo * ray.hitInfo.ao * aoVec;
-		outgoingLight = Color(1.0f, 1.0f, 1.0f);
-	}
-	else						// Return sky light on ray miss
-	{
-		return outgoingLight;
-	}
+	if (!ray.didHit)  return outgoingLight;	
+
+	Material* material = Material::getMaterial(ray.hitInfo.material);
+	setMaterialData(ray, material);
+
+
+	glm::vec3 aoVec(aoIntensity);
+	outgoingLight = ray.hitInfo.albedo * ray.hitInfo.ao * aoVec; // Ambient occlusion
 
 	if (ray.bounceCount == 0) // Return light color if last bounce 
 	{
@@ -67,10 +65,8 @@ Color CPURaytracer::singleTrace(Ray& ray, const Scene::ObjectMap& objects)
 
 	// Color incomingLight = singleTrace(bounceRay, objects);
 		
-
-	return outgoingLight;
-
 	
+	return outgoingLight;
 }
 
 // Credit https://tavianator.com/2022/ray_box_boundary.html
@@ -137,7 +133,7 @@ void CPURaytracer::getIntersectionPoint(Ray& ray, DisplayObject* object)
 	if (closestTriangle == -1) return;   // Ray missed or only hit further objects, exit early
 
 
-	// Populate ray with material data from object by using the barycentric coords
+	// Calculate interpolated position and uv coords
 	int i0 = indices[3 * closestTriangle];
 	int i1 = indices[3 * closestTriangle + 1];
 	int i2 = indices[3 * closestTriangle + 2];
@@ -153,10 +149,22 @@ void CPURaytracer::getIntersectionPoint(Ray& ray, DisplayObject* object)
 	glm::vec3 interpPosition = barycentricCoords.x * v0 + barycentricCoords.y * v1 + barycentricCoords.z * v2;
 	glm::vec2 interpUVCoords = barycentricCoords.x * uv0 + barycentricCoords.y * uv1 + barycentricCoords.z * uv2;
 
+	// Update ray info
 	ray.didHit = true;
 	ray.hitInfo.hitPosition = interpPosition;
 	ray.hitInfo.distance = minDistance;
 	ray.hitInfo.uv = interpUVCoords;
+	ray.hitInfo.material = object->getMaterialName();
+}
+
+void CPURaytracer::setMaterialData(Ray& ray, Material* material)
+{
+	ray.hitInfo.normal = material->getNormal(ray.hitInfo.uv.x, ray.hitInfo.uv.y);
+	ray.hitInfo.albedo = glm::vec3(material->getAlbedo(ray.hitInfo.uv.x, ray.hitInfo.uv.y));
+	ray.hitInfo.roughness = glm::vec3(material->getRoughness(ray.hitInfo.uv.x, ray.hitInfo.uv.y));
+	ray.hitInfo.metal = glm::vec3(material->getMetal(ray.hitInfo.uv.x, ray.hitInfo.uv.y));
+	ray.hitInfo.ao = material->getAmbientOcclusion(ray.hitInfo.uv.x, ray.hitInfo.uv.y);
+	ray.hitInfo.emission = material->getEmissionColor(ray.hitInfo.uv.x, ray.hitInfo.uv.y) * material->getEmissionStrength();
 }
 
 // https://www.pbr-book.org/3ed-2018/Shapes/Triangle_Meshes#fragment-Computeedgefunctioncoefficientsmonoe0monoe1andmonoe2-0

@@ -17,6 +17,8 @@ private:
 
 	void getIntersectionPoint(Ray& ray, DisplayObject* object);
 
+	void setMaterialData(Ray& ray, Material* material);
+
 	float distToTriangle(const Ray& ray, glm::vec3& v0, glm::vec3& v1, glm::vec3& v2, glm::vec3& barycentricCoords);
 
 	float randomValue(unsigned int& seed);
