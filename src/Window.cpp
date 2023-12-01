@@ -37,7 +37,7 @@ Window::Window(int width, int height, const char* name)
     scene = std::make_shared<Scene>();
 
     camera->calcRays(width, height);
-
+    /*
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -64,6 +64,7 @@ Window::Window(int width, int height, const char* name)
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(glfwWindow, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
+    */
 
     glfwSetWindowUserPointer(glfwWindow, this); // Set User Pointer
 
@@ -165,7 +166,7 @@ void Window::clearColorData()
 
 void Window::renderLoop()
 {
-    auto backend = CPURaytracer();
+    /*auto backend = CPURaytracer();
     Raytracer* raytracer = &backend;
     raytracer->setMaxDistance(100.0f);
 
@@ -178,13 +179,11 @@ void Window::renderLoop()
 
     Cube cube2;
     scene->addToScene("cube2", &cube2);
-    cube2.setMaterialName("bluemat");
+    cube2.setMaterialName("bluemat");*/
 
     // Cached values used between renders
-    ImGuiIO& io = ImGui::GetIO();
-    glm::vec3 prevCamPos(1.0f);
-    glm::quat prevCamRot;
-    std::vector<glm::vec3> rays;
+    // ImGuiIO& io = ImGui::GetIO();
+
     while (!glfwWindowShouldClose(glfwWindow))
     {
         // Poll and handle events (inputs, window resize, etc.)
@@ -194,24 +193,26 @@ void Window::renderLoop()
         // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
         glfwPollEvents();
 
+        /*
         // Start the Dear ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
+        */
 
         // mockCameraGUI(io);
 
-        displayGUI(io);
+        // displayGUI(io);
         // camera->updateGUI(io);
         
 
         //-----------------------------
 
         // Camera Update
-        camera->update(io);
+        //camera->update(io);
 
         // Scene Update
-        scene->update(io);
+        //scene->update(io);
         
         // data = raytracer->trace(scene, camera);
         
@@ -222,12 +223,22 @@ void Window::renderLoop()
         glBindTexture(GL_TEXTURE_2D, quadTexture);
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
+        /*
         // Rendering
         ImGui::Render();
         glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
+
+        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        {
+            GLFWwindow* backup_current_context = glfwGetCurrentContext();
+            ImGui::UpdatePlatformWindows();
+            ImGui::RenderPlatformWindowsDefault();
+            glfwMakeContextCurrent(backup_current_context);
+        }
+        */
 
         glfwSwapBuffers(glfwWindow);
     }
@@ -236,14 +247,14 @@ void Window::renderLoop()
 Window::~Window()
 {
     // Cleanup
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
+    //ImGui_ImplOpenGL3_Shutdown();
+    //ImGui_ImplGlfw_Shutdown();
+    //ImGui::DestroyContext();
 
     glfwDestroyWindow(glfwWindow);
     glfwTerminate();
 }
-
+/*
 void Window::displayGUI(ImGuiIO& io)
 {
     if (show_demo_window) ImGui::ShowDemoWindow(&show_demo_window);
@@ -278,7 +289,7 @@ void Window::mockCameraGUI(ImGuiIO& io)
 	ImGui::Text("Position: (%.2f, %.2f, %.2f)", CAMERA_START_POS.x, CAMERA_START_POS.y, CAMERA_START_POS.z);
 	ImGui::End();
 }
-
+*/
 void Window::keyCallback(int key, int scancode, int action, int mods)
 {
     for (auto callback : keyCallbacks)
