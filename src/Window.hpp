@@ -5,9 +5,9 @@
 #include <functional>
 #include <memory>
 
-//#include "ImGui/imgui.h"
-//#include "ImGui/imgui_impl_glfw.h"
-//#include "ImGui/imgui_impl_opengl3.h"
+#include "ImGui/imgui.h"
+#include "ImGui/imgui_impl_glfw.h"
+#include "ImGui/imgui_impl_opengl3.h"
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h> 
@@ -83,15 +83,11 @@ private:
 
     void updateTexture();
 
-    /*
-    // State
-    bool show_demo_window = false;
-    ImVec4 clear_color = ImVec4(0.5f, 0.5f, 0.5f, 1.00f);
 
     // GUI functions
-    void displayGUI(ImGuiIO& io);
-    void mockCameraGUI(ImGuiIO& io);
-    */
+    void displayWindowGUI(ImGuiIO& io);
+
+    
 
     
 };

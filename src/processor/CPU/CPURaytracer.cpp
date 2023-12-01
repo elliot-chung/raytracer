@@ -20,8 +20,7 @@ std::vector<float> CPURaytracer::trace(std::shared_ptr<Scene> scene, std::shared
 			ray.direction = direction;
 			ray.bounceCount = bounceCount;
 
-			Color color = glm::vec3(0.0f);
-			// Color color = singleTrace(ray, objects);
+			Color color = singleTrace(ray, objects);
 
 			int i = y * camera->getWidth() + x;
 

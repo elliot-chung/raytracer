@@ -22,7 +22,7 @@ public:
 		return (bool) objectMap.erase(name);
 	}
 
-	/*
+	
 	void update(ImGuiIO& io)
 	{
 		for (auto& object : objectMap)
@@ -30,7 +30,15 @@ public:
 			object.second->update(io);
 		}
 	}
-	*/
+
+	void updateGUI(ImGuiIO& io)
+	{
+		for (auto& object : objectMap)
+		{
+			object.second->updateGUI(io);
+		}
+	}
+	
 	inline ObjectMap& getObjects() { return objectMap; }
 	
 private:

@@ -37,34 +37,9 @@ Window::Window(int width, int height, const char* name)
     scene = std::make_shared<Scene>();
 
     camera->calcRays(width, height);
-    /*
-    // Setup Dear ImGui context
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO();
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // Enable Docking
-    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
-    //io.ConfigViewportsNoAutoMerge = true;
-    //io.ConfigViewportsNoTaskBarIcon = true;
-
-    // Setup Dear ImGui style
-    ImGui::StyleColorsDark();
-    //ImGui::StyleColorsLight();
-
-    // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
-    ImGuiStyle& style = ImGui::GetStyle();
-    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-    {
-        style.WindowRounding = 0.0f;
-        style.Colors[ImGuiCol_WindowBg].w = 1.0f;
-    }
-
-    // Setup Platform/Renderer backends
-    ImGui_ImplGlfw_InitForOpenGL(glfwWindow, true);
-    ImGui_ImplOpenGL3_Init(glsl_version);
-    */
+    
+    
+    
 
     glfwSetWindowUserPointer(glfwWindow, this); // Set User Pointer
 
@@ -91,6 +66,33 @@ Window::Window(int width, int height, const char* name)
             Window* win = (Window*)glfwGetWindowUserPointer(window);
             win->resizeCallback(width, height);
         }); // Set Resize Callback
+
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // Enable Docking
+    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
+    //io.ConfigViewportsNoAutoMerge = true;
+    //io.ConfigViewportsNoTaskBarIcon = true;
+
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+    //ImGui::StyleColorsLight();
+
+    // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
+    ImGuiStyle& style = ImGui::GetStyle();
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        style.WindowRounding = 0.0f;
+        style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+    }
+
+    // Setup Platform/Renderer backends
+    ImGui_ImplGlfw_InitForOpenGL(glfwWindow, true);
+    ImGui_ImplOpenGL3_Init(glsl_version);
 
     // Setup fullscreen quad 
     unsigned int quadVBO;
@@ -166,7 +168,8 @@ void Window::clearColorData()
 
 void Window::renderLoop()
 {
-    /*auto backend = CPURaytracer();
+    
+    auto backend = CPURaytracer();
     Raytracer* raytracer = &backend;
     raytracer->setMaxDistance(100.0f);
 
@@ -179,10 +182,11 @@ void Window::renderLoop()
 
     Cube cube2;
     scene->addToScene("cube2", &cube2);
-    cube2.setMaterialName("bluemat");*/
+    cube2.setMaterialName("bluemat");
+    
 
     // Cached values used between renders
-    // ImGuiIO& io = ImGui::GetIO();
+    ImGuiIO& io = ImGui::GetIO();
 
     while (!glfwWindowShouldClose(glfwWindow))
     {
@@ -193,28 +197,23 @@ void Window::renderLoop()
         // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
         glfwPollEvents();
 
-        /*
+        
         // Start the Dear ImGui frame
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
-        */
-
-        // mockCameraGUI(io);
-
-        // displayGUI(io);
-        // camera->updateGUI(io);
         
 
-        //-----------------------------
 
-        // Camera Update
-        //camera->update(io);
+        displayWindowGUI(io);
+        camera->updateGUI(io);  
+        scene->updateGUI(io);
 
-        // Scene Update
-        //scene->update(io);
+
+        camera->update(io);
+        scene->update(io);
         
-        // data = raytracer->trace(scene, camera);
+        data = raytracer->trace(scene, camera);
         
         //----------------------------
 
@@ -223,11 +222,11 @@ void Window::renderLoop()
         glBindTexture(GL_TEXTURE_2D, quadTexture);
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
-        /*
+        
         // Rendering
         ImGui::Render();
-        glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
-        glClear(GL_COLOR_BUFFER_BIT);
+        /*glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);*/
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 
@@ -238,7 +237,7 @@ void Window::renderLoop()
             ImGui::RenderPlatformWindowsDefault();
             glfwMakeContextCurrent(backup_current_context);
         }
-        */
+        
 
         glfwSwapBuffers(glfwWindow);
     }
@@ -247,27 +246,26 @@ void Window::renderLoop()
 Window::~Window()
 {
     // Cleanup
-    //ImGui_ImplOpenGL3_Shutdown();
-    //ImGui_ImplGlfw_Shutdown();
-    //ImGui::DestroyContext();
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
 
     glfwDestroyWindow(glfwWindow);
     glfwTerminate();
 }
-/*
-void Window::displayGUI(ImGuiIO& io)
+
+void Window::displayWindowGUI(ImGuiIO& io)
 {
-    if (show_demo_window) ImGui::ShowDemoWindow(&show_demo_window);
+	static bool show_demo_window = false;    
     static float f = 0.0f;
     static int counter = 0;
+
+    if (show_demo_window) ImGui::ShowDemoWindow(&show_demo_window);
 
     ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
 
     ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
     ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-
-    ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-    // ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
 
     if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
     {
@@ -279,17 +277,8 @@ void Window::displayGUI(ImGuiIO& io)
 
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
     ImGui::End();
-
-    // mockCameraGUI(io);
 }
 
-void Window::mockCameraGUI(ImGuiIO& io)
-{
-    ImGui::Begin("Camera");
-	ImGui::Text("Position: (%.2f, %.2f, %.2f)", CAMERA_START_POS.x, CAMERA_START_POS.y, CAMERA_START_POS.z);
-	ImGui::End();
-}
-*/
 void Window::keyCallback(int key, int scancode, int action, int mods)
 {
     for (auto callback : keyCallbacks)
