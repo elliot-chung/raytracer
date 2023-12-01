@@ -22,11 +22,11 @@ public:
 		return (bool) objectMap.erase(name);
 	}
 
-	void update()
+	void update(ImGuiIO& io)
 	{
 		for (auto& object : objectMap)
 		{
-			object.second->update();
+			object.second->update(io);
 		}
 	}
 

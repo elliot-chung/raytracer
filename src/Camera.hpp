@@ -48,7 +48,7 @@ public:
                     float uFactor = (float)((j * hStep) - yOffset);
 
                     int index = j * width + i;
-                    preTransformRays[index] = glm::normalize(rFactor * right + uFactor * up);
+                    preTransformRays[index] = glm::normalize(forward + rFactor * right + uFactor * up);
                 }
             }
         }

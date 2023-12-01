@@ -1,5 +1,8 @@
 #include "CPURaytracer.hpp"
 
+#include <iostream>
+#include "glm/gtx/string_cast.hpp"
+
 std::vector<float> CPURaytracer::trace(std::shared_ptr<Scene> scene, const std::vector<glm::vec3>& rayDirections, const glm::vec3& origin)
 {
 	Scene::ObjectMap objects = scene->getObjects();
@@ -11,7 +14,7 @@ std::vector<float> CPURaytracer::trace(std::shared_ptr<Scene> scene, const std::
 		ray.origin = origin;
 		ray.direction = direction;
 		ray.bounceCount = bounceCount;
-
+		
 		Color color = singleTrace(ray, objects);
 
 		output[3 * i]     = color.r;
@@ -30,13 +33,13 @@ Color CPURaytracer::singleTrace(Ray& ray, const Scene::ObjectMap& objects)
 		if (!intersectsBoundingBox(ray, object->getMinBound(), object->getMaxBound())) continue; // Skip if ray doesn't intersect BB
 		getIntersectionPoint(ray, object);
 
-		Color outgoingLight(0.03, 0.03, 0.03);       // Slight skylight
+		Color outgoingLight(0.1, 0.1, 0.1);       // Slight skylight
 
 		if (ray.didHit)  // Get the ambient light values from the hit location
 		{
 			glm::vec3 aoVec(aoIntensity);
 			// outgoingLight = ray.hitInfo.albedo * ray.hitInfo.ao * aoVec;
-			outgoingLight = Color(0.5f, 0.5f, 0.5f);
+			outgoingLight = Color(1.0f, 1.0f, 1.0f);
 		}
 		else						// Return sky light on ray miss
 		{
@@ -82,16 +85,18 @@ void CPURaytracer::getIntersectionPoint(Ray& ray, DisplayObject* object)
 	// Loop over all the triangles in object
 	for (int i = 0; i < mesh->getTriangleCount(); i++)
 	{
-		int i0 = indices[3 * i];
-		int i1 = indices[3 * i + 1];
-		int i2 = indices[3 * i + 2];
+		int i0 = indices[3 * i] * 3;
+		int i1 = indices[3 * i + 1] * 3;
+		int i2 = indices[3 * i + 2] * 3;
 
 		glm::vec3 v0( vertices[i0], vertices[i0 + 1], vertices[i0 + 2] );
 		glm::vec3 v1( vertices[i1], vertices[i1 + 1], vertices[i1 + 2] );
 		glm::vec3 v2( vertices[i2], vertices[i2 + 1], vertices[i2 + 2] );
+
 		v0 = glm::vec3(model * glm::vec4(v0, 1.0f));
 		v1 = glm::vec3(model * glm::vec4(v1, 1.0f));
 		v2 = glm::vec3(model * glm::vec4(v2, 1.0f));
+
 		
 		glm::vec3 bc(0.0f);
 		float dist = distToTriangle(ray, v0, v1, v2, bc);
@@ -104,6 +109,7 @@ void CPURaytracer::getIntersectionPoint(Ray& ray, DisplayObject* object)
 	}
 
 	if (closestTriangle == -1) return;   // Ray missed, exit early
+
 
 	// Populate ray with material data from object by using the barycentric coords
 	int i0 = indices[3 * closestTriangle];
@@ -137,7 +143,9 @@ float CPURaytracer::distToTriangle(const Ray& ray, glm::vec3& v0, glm::vec3& v1,
 	glm::vec3 v1t = v1 - ray.origin;
 	glm::vec3 v2t = v2 - ray.origin;
 
-	glm::vec3 d(ray.direction[0], ray.direction[1], ray.direction[2]);
+	glm::vec3 d(ray.direction);
+
+	
 
 	// Should all be precomputed
 	float absDirx = abs(ray.direction[0]);
@@ -154,7 +162,7 @@ float CPURaytracer::distToTriangle(const Ray& ray, glm::vec3& v0, glm::vec3& v1,
 	v1t = glm::vec3(v1t[kx], v1t[ky], v1t[kz]);
 	v2t = glm::vec3(v2t[kx], v2t[ky], v2t[kz]);
 
-	// Precompute this
+	// Precomputable
 	float sx = -d.x / d.z;
 	float sy = -d.y / d.z;
 	float sz = 1.f / d.z;
@@ -191,6 +199,7 @@ float CPURaytracer::distToTriangle(const Ray& ray, glm::vec3& v0, glm::vec3& v1,
 	float det = e0 + e1 + e2;
 	if (det == 0)
 		return INFINITY;
+	
 
 	// Check point distance from origin
 	v0t.z *= sz;
@@ -202,12 +211,14 @@ float CPURaytracer::distToTriangle(const Ray& ray, glm::vec3& v0, glm::vec3& v1,
 	else if (det > 0 && (tScaled <= 0 || tScaled > maxDistance * det))
 		return INFINITY;
 
+
 	// Calculate barycentric coords and parametric value (distance)
 	float invDet = 1 / det;
 	float b0 = e0 * invDet;
 	float b1 = e1 * invDet;
 	float b2 = e2 * invDet;
 	float t = tScaled * invDet;
+
 
 	barycentricCoords.x = b0;
 	barycentricCoords.y = b1;

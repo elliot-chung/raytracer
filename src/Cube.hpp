@@ -5,7 +5,7 @@
 class Cube : public DisplayObject
 {
 public:
-	Cube(glm::vec3 position = {}, glm::quat rotation = {}, glm::vec3 scale = {}) : DisplayObject(position, rotation, scale)
+	Cube(glm::vec3 position = DEFAULT_POSITION, glm::quat rotation = DEFAULT_ROTATION, glm::vec3 scale = DEFAULT_SCALE) : DisplayObject(position, rotation, scale)
 	{
 		std::vector<float> vertices = {
 			-0.5f, -0.5f, -0.5f,

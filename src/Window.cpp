@@ -166,6 +166,7 @@ void Window::renderLoop()
 {
     auto backend = CPURaytracer();
     Raytracer* raytracer = &backend;
+    raytracer->setMaxDistance(100.0f);
 
     Cube cube;
     scene->addToScene("cube", &cube);
@@ -212,10 +213,10 @@ void Window::renderLoop()
         prevCamRot = camera->getRotation();
 
         // Scene Update
-        scene->update();
-
+        scene->update(io);
+        
         data = raytracer->trace(scene, rays, currentCamPos);
-
+        
         //----------------------------
 
         updateTexture();
