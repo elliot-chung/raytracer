@@ -9,7 +9,7 @@
 class CPURaytracer : public Raytracer
 {
 public:
-	std::vector<float> trace(std::shared_ptr<Scene> s, const std::vector<glm::vec3>& rayDirections, const glm::vec3& origin);	
+	std::vector<float> trace(std::shared_ptr<Scene> s, std::shared_ptr<Camera> c);
 private:
 	Color singleTrace(Ray& ray, const Scene::ObjectMap& objects);
 
@@ -23,4 +23,6 @@ private:
 
 	float randomValueNormalDistribution(unsigned int& seed);
 	
+	inline float min(float a, float b) { return a < b ? a : b; }
+	inline float max(float a, float b) { return a > b ? a : b; }
 };

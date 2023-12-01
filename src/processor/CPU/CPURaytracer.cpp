@@ -3,24 +3,32 @@
 #include <iostream>
 #include "glm/gtx/string_cast.hpp"
 
-std::vector<float> CPURaytracer::trace(std::shared_ptr<Scene> scene, const std::vector<glm::vec3>& rayDirections, const glm::vec3& origin)
+std::vector<float> CPURaytracer::trace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera> camera)
 {
 	Scene::ObjectMap objects = scene->getObjects();
-	std::vector<float> output(rayDirections.size() * 3, 1.0f);
-	int i = 0;
-	for (auto direction : rayDirections)
-	{
-		Ray ray = {};
-		ray.origin = origin;
-		ray.direction = direction;
-		ray.bounceCount = bounceCount;
-		
-		Color color = singleTrace(ray, objects);
+	std::vector<float> output(camera->getPixelCount() * 3, 1.0f);
 
-		output[3 * i]     = color.r;
-		output[3 * i + 1] = color.g;
-		output[3 * i + 2] = color.b;
-		i++;
+	glm::vec3 origin = camera->getPosition();
+
+	for (int y = 0; y < camera->getHeight(); y++ )
+	{
+		for (int x = 0; x < camera->getWidth(); x++)
+		{
+			glm::vec3 direction = camera->getRayDirection(x, y);
+			Ray ray = {};
+			ray.origin = origin;
+			ray.direction = direction;
+			ray.bounceCount = bounceCount;
+
+			Color color = singleTrace(ray, objects);
+
+			int i = y * camera->getWidth() + x;
+
+			output[3 * i] = color.r;
+			output[3 * i + 1] = color.g;
+			output[3 * i + 2] = color.b;
+			i++;
+		}
 	}
 	return output;
 }
@@ -32,41 +40,59 @@ Color CPURaytracer::singleTrace(Ray& ray, const Scene::ObjectMap& objects)
 		DisplayObject* object = objPair.second;
 		if (!intersectsBoundingBox(ray, object->getMinBound(), object->getMaxBound())) continue; // Skip if ray doesn't intersect BB
 		getIntersectionPoint(ray, object);
+	}
 
-		Color outgoingLight(0.1, 0.1, 0.1);       // Slight skylight
+	Color outgoingLight(0.1, 0.1, 0.1);       // Slight skylight
 
-		if (ray.didHit)  // Get the ambient light values from the hit location
-		{
-			glm::vec3 aoVec(aoIntensity);
-			// outgoingLight = ray.hitInfo.albedo * ray.hitInfo.ao * aoVec;
-			outgoingLight = Color(1.0f, 1.0f, 1.0f);
-		}
-		else						// Return sky light on ray miss
-		{
-			return outgoingLight;
-		}
+	if (ray.didHit)  // Get the ambient light values from the hit location
+	{
+		glm::vec3 aoVec(aoIntensity);
+		// outgoingLight = ray.hitInfo.albedo * ray.hitInfo.ao * aoVec;
+		outgoingLight = Color(1.0f, 1.0f, 1.0f);
+	}
+	else						// Return sky light on ray miss
+	{
+		return outgoingLight;
+	}
 
-		if (ray.bounceCount == 0) // Return light color if last bounce 
-		{
-			return outgoingLight;
-		}
+	if (ray.bounceCount == 0) // Return light color if last bounce 
+	{
+		return outgoingLight;
+	}
 
-		// Create bounce ray according to material data
-		Ray bounceRay = {};
-		bounceRay.origin = ray.hitInfo.hitPosition;
-		ray.bounceCount--;
+	// Create bounce ray according to material data
+	Ray bounceRay = {};
+	bounceRay.origin = ray.hitInfo.hitPosition;
+	ray.bounceCount--;
 
-		// Color incomingLight = singleTrace(bounceRay, objects);
+	// Color incomingLight = singleTrace(bounceRay, objects);
 		
 
-		return outgoingLight;
+	return outgoingLight;
 
-	}
+	
 }
 
+// Credit https://tavianator.com/2022/ray_box_boundary.html
 bool CPURaytracer::intersectsBoundingBox(const Ray& ray, const glm::vec3& minBound, const glm::vec3& maxBound)
 {
-	return true;
+	float tmin = 0.0, tmax = ray.didHit ? ray.hitInfo.distance : INFINITY;
+
+	glm::vec3 dirInv = 1.0f / ray.direction;
+
+	for (int d = 0; d < 3; ++d) {
+		bool sign = signbit(ray.direction[d]);
+		float bmin = sign ? maxBound[d] : minBound[d];
+		float bmax = sign ? minBound[d] : maxBound[d];
+
+		float dmin = (bmin - ray.origin[d]) * dirInv[d];
+		float dmax = (bmax - ray.origin[d]) * dirInv[d];
+
+		tmin = max(dmin, tmin);
+		tmax = min(dmax, tmax);
+	}
+
+	return tmin < tmax;
 }
 
 void CPURaytracer::getIntersectionPoint(Ray& ray, DisplayObject* object)
@@ -80,7 +106,7 @@ void CPURaytracer::getIntersectionPoint(Ray& ray, DisplayObject* object)
 
 	int closestTriangle = -1;
 	glm::vec3 barycentricCoords(0.0f);
-	float minDistance = INFINITY;
+	float minDistance = ray.didHit ? ray.hitInfo.distance : INFINITY;
 
 	// Loop over all the triangles in object
 	for (int i = 0; i < mesh->getTriangleCount(); i++)
@@ -108,7 +134,7 @@ void CPURaytracer::getIntersectionPoint(Ray& ray, DisplayObject* object)
 		}
 	}
 
-	if (closestTriangle == -1) return;   // Ray missed, exit early
+	if (closestTriangle == -1) return;   // Ray missed or only hit further objects, exit early
 
 
 	// Populate ray with material data from object by using the barycentric coords
@@ -145,8 +171,6 @@ float CPURaytracer::distToTriangle(const Ray& ray, glm::vec3& v0, glm::vec3& v1,
 
 	glm::vec3 d(ray.direction);
 
-	
-
 	// Should all be precomputed
 	float absDirx = abs(ray.direction[0]);
 	float absDiry = abs(ray.direction[1]);
@@ -163,9 +187,10 @@ float CPURaytracer::distToTriangle(const Ray& ray, glm::vec3& v0, glm::vec3& v1,
 	v2t = glm::vec3(v2t[kx], v2t[ky], v2t[kz]);
 
 	// Precomputable
-	float sx = -d.x / d.z;
-	float sy = -d.y / d.z;
 	float sz = 1.f / d.z;
+	float sx = -d.x * sz;
+	float sy = -d.y * sz;
+	
 
 	// Apply shear transform to x/y values of vertices (z is done after point is confirmed to lie in the triangle)
 	v0t.x += sx * v0t.z;

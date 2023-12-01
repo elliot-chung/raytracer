@@ -113,7 +113,7 @@ public:
 		static Mesh sMesh(vertices, indices, uvCoords);
 		mesh = &sMesh;
 		glm::mat4 model = getModelMatrix();
-		minBound = model * glm::vec4(mesh->getMinBound(), 1.0f); // Wrap this in glm::vec3() if it doesnt work
-		maxBound = model * glm::vec4(mesh->getMaxBound(), 1.0f);
+		minBound = glm::vec3(model * glm::vec4(mesh->getMinBound(), 1.0f)); // Wrap this in glm::vec3() if it doesnt work
+		maxBound = glm::vec3(model * glm::vec4(mesh->getMaxBound(), 1.0f));
 	}
 };

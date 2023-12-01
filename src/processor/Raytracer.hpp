@@ -6,6 +6,7 @@
 #include <glm/glm.hpp>
 
 #include "../Scene.hpp"
+#include "../Camera.hpp"
 
 
 struct RayHit
@@ -37,7 +38,7 @@ typedef glm::vec3 Color;
 class Raytracer
 {
 public:
-	virtual std::vector<float> trace(std::shared_ptr<Scene> s, const std::vector<glm::vec3>& rayDirections, const glm::vec3& origin) { return std::vector<float>(); }
+	virtual std::vector<float> trace(std::shared_ptr<Scene> s, std::shared_ptr<Camera> c) { return std::vector<float>(); }
 
 	inline void setBounceCount(int count) { bounceCount = count; }
 	inline void setMaxDistance(float distance) { maxDistance = distance; }

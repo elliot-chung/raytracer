@@ -60,7 +60,7 @@ private:
     void resizeCallback(int width, int height);
 
     std::unique_ptr<Shader> screenShader;
-    std::unique_ptr<Camera> camera;
+    std::shared_ptr<Camera> camera;
     std::shared_ptr<Scene> scene;
 
     unsigned int quadVAO{ 0 };
@@ -85,7 +85,6 @@ private:
     // State
     bool show_demo_window = false;
     ImVec4 clear_color = ImVec4(0.5f, 0.5f, 0.5f, 1.00f);
-    bool recalculateRayDirections = false;
 
     // GUI functions
     void displayGUI(ImGuiIO& io);

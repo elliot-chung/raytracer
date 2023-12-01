@@ -33,9 +33,10 @@ Window::Window(int width, int height, const char* name)
 
     // Make unique object pointers
     screenShader = std::make_unique<Shader>("src/shaders/vert.shader", "src/shaders/frag.shader");
-    camera = std::make_unique<Camera>(CAMERA_START_POS, glm::quat(), CAMERA_START_FOV);
+    camera = std::make_shared<Camera>(CAMERA_START_POS, glm::quat(), CAMERA_START_FOV);
     scene = std::make_shared<Scene>();
 
+    camera->calcRays(width, height);
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -168,8 +169,11 @@ void Window::renderLoop()
     Raytracer* raytracer = &backend;
     raytracer->setMaxDistance(100.0f);
 
-    Cube cube;
+    Cube cube(glm::vec3(0.0f, -1.0f, 0.0f), glm::quat(), glm::vec3(100.0f, 1.0f, 100.0f));
     scene->addToScene("cube", &cube);
+
+    Cube cube2;
+    scene->addToScene("cube2", &cube2);
 
     // Cached values used between renders
     ImGuiIO& io = ImGui::GetIO();
@@ -200,22 +204,10 @@ void Window::renderLoop()
 
         //-----------------------------
 
-        // Camera Update
-        glm::vec3 currentCamPos = camera->getPosition();
-        glm::quat currentCamRot = camera->getRotation();
-        bool camChanged = currentCamPos != prevCamPos && currentCamRot != prevCamRot;
-        if (camChanged || recalculateRayDirections)
-        {
-            rays = camera->getRays(width, height);
-            recalculateRayDirections = false;
-        }
-        prevCamPos = camera->getPosition();
-        prevCamRot = camera->getRotation();
-
         // Scene Update
         scene->update(io);
         
-        data = raytracer->trace(scene, rays, currentCamPos);
+        data = raytracer->trace(scene, camera);
         
         //----------------------------
 
@@ -298,5 +290,5 @@ void Window::resizeCallback(int width, int height)
     this->width = width;
     this->height = height;
     clearColorData();
-    recalculateRayDirections = true;
+    camera->calcRays(width, height);
 }
