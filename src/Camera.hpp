@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include "ImGui/imgui.h"
+// #include "ImGui/imgui.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -14,6 +14,7 @@ class Camera
 public:
     Camera(glm::vec3& position, glm::quat& rotation, float fov) : Position(position), Rotation(rotation), verticalFOV(fov) { }
 
+    /*
     virtual void update(ImGuiIO& io) {}
 
     void updateGUI(ImGuiIO& io)
@@ -23,6 +24,7 @@ public:
 		ImGui::Text("Rotation: (%.2f, %.2f, %.2f, %.2f)", Rotation.x, Rotation.y, Rotation.z, Rotation.w);
 		ImGui::End();
 	}
+    */
 
     void calcRays(int width, int height)
     {

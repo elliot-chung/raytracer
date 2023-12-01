@@ -3,7 +3,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-#include "ImGui/imgui.h"
+// #include "ImGui/imgui.h"
 
 #include "Mesh.hpp"
 
@@ -32,7 +32,7 @@ public:
 		return model;
 	}
 
-	virtual void update(ImGuiIO& io) {}
+	// virtual void update(ImGuiIO& io) {}
 
 	inline void setPosition(glm::vec3 position)		{ Position = position; setBounds(); }
 	inline void setRotation(glm::quat rotation)		{ Rotation = rotation; setBounds(); }
