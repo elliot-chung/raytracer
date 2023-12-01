@@ -89,5 +89,7 @@ private:
 
     // GUI functions
     void displayGUI(ImGuiIO& io);
+    void mockCameraGUI(ImGuiIO& io);
+
     
 };

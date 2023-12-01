@@ -199,20 +199,21 @@ void Window::renderLoop()
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
+        // mockCameraGUI(io);
+
         displayGUI(io);
-
-        // Rendering
-        ImGui::Render();
-
-        glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
-        glClear(GL_COLOR_BUFFER_BIT);
+        // camera->updateGUI(io);
+        
 
         //-----------------------------
+
+        // Camera Update
+        camera->update(io);
 
         // Scene Update
         scene->update(io);
         
-        data = raytracer->trace(scene, camera);
+        // data = raytracer->trace(scene, camera);
         
         //----------------------------
 
@@ -221,18 +222,12 @@ void Window::renderLoop()
         glBindTexture(GL_TEXTURE_2D, quadTexture);
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
+        // Rendering
+        ImGui::Render();
+        glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
+        glClear(GL_COLOR_BUFFER_BIT);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-        // Update and Render additional Platform Windows
-        // (Platform functions may change the current OpenGL context, so we save/restore it to make it easier to paste this code elsewhere.
-        //  For this specific demo app we could also call glfwMakeContextCurrent(window) directly)
-        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-        {
-            GLFWwindow* backup_current_context = glfwGetCurrentContext();
-            ImGui::UpdatePlatformWindows();
-            ImGui::RenderPlatformWindowsDefault();
-            glfwMakeContextCurrent(backup_current_context);
-        }
 
         glfwSwapBuffers(glfwWindow);
     }
@@ -273,6 +268,15 @@ void Window::displayGUI(ImGuiIO& io)
 
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
     ImGui::End();
+
+    // mockCameraGUI(io);
+}
+
+void Window::mockCameraGUI(ImGuiIO& io)
+{
+    ImGui::Begin("Camera");
+	ImGui::Text("Position: (%.2f, %.2f, %.2f)", CAMERA_START_POS.x, CAMERA_START_POS.y, CAMERA_START_POS.z);
+	ImGui::End();
 }
 
 void Window::keyCallback(int key, int scancode, int action, int mods)

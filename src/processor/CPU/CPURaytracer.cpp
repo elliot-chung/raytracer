@@ -20,7 +20,8 @@ std::vector<float> CPURaytracer::trace(std::shared_ptr<Scene> scene, std::shared
 			ray.direction = direction;
 			ray.bounceCount = bounceCount;
 
-			Color color = singleTrace(ray, objects);
+			Color color = glm::vec3(0.0f);
+			// Color color = singleTrace(ray, objects);
 
 			int i = y * camera->getWidth() + x;
 
@@ -46,6 +47,7 @@ Color CPURaytracer::singleTrace(Ray& ray, const Scene::ObjectMap& objects)
 
 	if (!ray.didHit)  return outgoingLight;	
 
+	// Set material data using closest hit object
 	Material* material = Material::getMaterial(ray.hitInfo.material);
 	setMaterialData(ray, material);
 
@@ -61,7 +63,9 @@ Color CPURaytracer::singleTrace(Ray& ray, const Scene::ObjectMap& objects)
 	// Create bounce ray according to material data
 	Ray bounceRay = {};
 	bounceRay.origin = ray.hitInfo.hitPosition;
-	ray.bounceCount--;
+	bounceRay.bounceCount = ray.bounceCount - 1;
+	
+
 
 	// Color incomingLight = singleTrace(bounceRay, objects);
 		

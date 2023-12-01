@@ -14,6 +14,16 @@ class Camera
 public:
     Camera(glm::vec3& position, glm::quat& rotation, float fov) : Position(position), Rotation(rotation), verticalFOV(fov) { }
 
+    virtual void update(ImGuiIO& io) {}
+
+    void updateGUI(ImGuiIO& io)
+    {
+		ImGui::Begin("Camera");
+		ImGui::Text("Position: (%.2f, %.2f, %.2f)", Position.x, Position.y, Position.z);
+		ImGui::Text("Rotation: (%.2f, %.2f, %.2f, %.2f)", Rotation.x, Rotation.y, Rotation.z, Rotation.w);
+		ImGui::End();
+	}
+
     void calcRays(int width, int height)
     {
         this->width = width;
