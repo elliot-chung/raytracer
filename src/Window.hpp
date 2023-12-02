@@ -21,8 +21,9 @@
 
 #include "glm/gtx/string_cast.hpp"
 
-#define CAMERA_START_POS glm::vec3(0.0f, 0.0f, 2.0f)
+#define CAMERA_START_POS glm::vec3(0.0f, 0.0f, 10.0f)
 #define CAMERA_START_FOV 45.0f
+#define CAMERA_START_EXPOSURE 1.0f
 
 typedef const std::function<void(int key, int scancode, int action, int mods)> KeyCallback;
 typedef const std::function<void(double xpos, double ypos)> MouseMoveCallback;

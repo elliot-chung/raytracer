@@ -33,7 +33,7 @@ Window::Window(int width, int height, const char* name)
 
     // Make unique object pointers
     screenShader = std::make_unique<Shader>("src/shaders/vert.shader", "src/shaders/frag.shader");
-    camera = std::make_shared<Camera>(CAMERA_START_POS, glm::quat(), CAMERA_START_FOV);
+    camera = std::make_shared<Camera>(CAMERA_START_POS, glm::quat(), CAMERA_START_FOV, CAMERA_START_EXPOSURE);
     scene = std::make_shared<Scene>();
 
     camera->calcRays(width, height);
@@ -112,6 +112,9 @@ Window::Window(int width, int height, const char* name)
     // Initialize Data
     clearColorData();
 
+    // Gamma Correction
+    glEnable(GL_FRAMEBUFFER_SRGB);
+
     // generate texture  
     glGenTextures(1, &quadTexture);
     glBindTexture(GL_TEXTURE_2D, quadTexture);
@@ -172,18 +175,23 @@ void Window::renderLoop()
     auto backend = CPURaytracer();
     Raytracer* raytracer = &backend;
     raytracer->setMaxDistance(100.0f);
+    raytracer->setBounceCount(1);
 
     Material mat1("redmat", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), 1.0f);
     Material mat2("bluemat", glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), 1.0f);
+    Material mat3("lightmat", glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0.0f, glm::vec3(1.0f, 1.0f, 1.0f), 10.0f);
 
     Cube cube(glm::vec3(0.0f, -1.0f, 0.0f), glm::quat(), glm::vec3(100.0f, 1.0f, 100.0f));
     scene->addToScene("cube", &cube);
     cube.setMaterialName("redmat");
 
-    Cube cube2;
+    Cube cube2(glm::vec3(0.0f, 0.2f, 0.0f));
     scene->addToScene("cube2", &cube2);
     cube2.setMaterialName("bluemat");
     
+    Cube cube3(glm::vec3(0.0f, 2.0f, 0.0f));
+    scene->addToScene("cube3", &cube3);
+    cube3.setMaterialName("lightmat");
 
     // Cached values used between renders
     ImGuiIO& io = ImGui::GetIO();

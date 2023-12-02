@@ -12,21 +12,24 @@
 class Camera
 {
 public:
-    Camera(glm::vec3& position, glm::quat& rotation, float fov) : Position(position), Rotation(rotation), verticalFOV(fov) { }
+    Camera(glm::vec3& position, glm::quat& rotation, float fov, float exposure) : Position(position), Rotation(rotation), verticalFOV(fov), exposureValue(exposure) { }
 
     
     virtual void update(ImGuiIO& io) {}
 
     void updateGUI(ImGuiIO& io)
     {
-        static glm::vec3 euler = glm::eulerAngles(Rotation);
+        static glm::vec3 euler = glm::degrees(glm::eulerAngles(Rotation));
 		ImGui::Begin("Camera");
-		ImGui::Text("Position: (%.2f, %.2f, %.2f)", Position.x, Position.y, Position.z);
-		ImGui::Text("Rotation: (%.2f, %.2f, %.2f, %.2f)", Rotation.x, Rotation.y, Rotation.z, Rotation.w);
-        ImGui::InputFloat3("Position", &Position[0]);
-        ImGui::InputFloat3("Rotation", &euler[0]);
-        if (euler != glm::eulerAngles(Rotation)) {
-			Rotation = glm::quat(euler);
+        ImGui::DragFloat3("Position", &Position[0], 0.1f);
+        ImGui::DragFloat3("Rotation", &euler[0], 1.0f, -359.9f, 359.9f);
+        ImGui::DragFloat("FOV", &verticalFOV, 1.0f, -179.9f, 179.9f);
+        ImGui::DragFloat("Exposure", &exposureValue, 0.1f, 0.0f);
+        if (euler != glm::degrees(glm::eulerAngles(Rotation))) {
+			Rotation = glm::quat(glm::radians(euler));
+		}
+        if (ImGui::Button("Recalculate Rays")) {
+            calcRays(width, height);
 		}
 		ImGui::End();
 	}
@@ -67,6 +70,7 @@ public:
     inline int getWidth() { return width; }
     inline int getHeight() { return height; }
     inline int getPixelCount() { return width * height; }
+    inline float getExposure() { return exposureValue; }
 
     inline glm::vec3 getPosition() { return Position; }
     inline glm::quat getRotation() { return Rotation; }
@@ -81,4 +85,5 @@ private:
     int height = 0;
 
     float verticalFOV;
+    float exposureValue;
 };

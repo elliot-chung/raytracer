@@ -50,5 +50,5 @@ protected:
 	int bounceCount = 0;
 	float maxDistance = 0.0f;
 
-	float aoIntensity = 0.1;
+	float aoIntensity = 0.01;
 };

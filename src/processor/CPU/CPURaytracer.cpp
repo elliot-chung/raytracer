@@ -9,6 +9,7 @@ std::vector<float> CPURaytracer::trace(std::shared_ptr<Scene> scene, std::shared
 	std::vector<float> output(camera->getPixelCount() * 3, 1.0f);
 
 	glm::vec3 origin = camera->getPosition();
+	float exposure = camera->getExposure();
 
 	for (int y = 0; y < camera->getHeight(); y++ )
 	{
@@ -21,13 +22,17 @@ std::vector<float> CPURaytracer::trace(std::shared_ptr<Scene> scene, std::shared
 			ray.bounceCount = bounceCount;
 
 			Color color = singleTrace(ray, objects);
+			color = glm::vec3(1.0f) - glm::exp(-color * exposure);
+
+
+			if (x == camera->getWidth() / 2 && y == camera->getHeight() / 2)
+				std::cout << glm::to_string(ray.hitInfo.normal) << std::endl;
 
 			int i = y * camera->getWidth() + x;
 
 			output[3 * i] = color.r;
 			output[3 * i + 1] = color.g;
 			output[3 * i + 2] = color.b;
-			i++;
 		}
 	}
 	return output;
@@ -42,7 +47,7 @@ Color CPURaytracer::singleTrace(Ray& ray, const Scene::ObjectMap& objects)
 		getIntersectionPoint(ray, object);
 	}
 
-	Color outgoingLight(0.1, 0.1, 0.1);       // Slight skylight
+	Color outgoingLight(0.00, 0.00, 0.00);       // Slight skylight
 
 	if (!ray.didHit)  return outgoingLight;	
 
@@ -51,22 +56,26 @@ Color CPURaytracer::singleTrace(Ray& ray, const Scene::ObjectMap& objects)
 	setMaterialData(ray, material);
 
 
-	glm::vec3 aoVec(aoIntensity);
-	outgoingLight = ray.hitInfo.albedo * ray.hitInfo.ao * aoVec; // Ambient occlusion
+	outgoingLight += ray.hitInfo.emission;
 
-	if (ray.bounceCount == 0) // Return light color if last bounce 
+	if (ray.bounceCount == 0)
 	{
+		glm::vec3 aoVec(aoIntensity);
+		outgoingLight = ray.hitInfo.albedo * ray.hitInfo.ao * aoVec; // Ambient occlusion
 		return outgoingLight;
 	}
+	
 
 	// Create bounce ray according to material data
 	Ray bounceRay = {};
 	bounceRay.origin = ray.hitInfo.hitPosition;
 	bounceRay.bounceCount = ray.bounceCount - 1;
-	
+	bounceRay.direction = randomUnitVectorInHemisphere(randomSeed, ray.hitInfo.normal);
 
 
-	// Color incomingLight = singleTrace(bounceRay, objects);
+	Color incomingLight = singleTrace(bounceRay, objects);
+
+	outgoingLight += incomingLight * ray.hitInfo.albedo;
 		
 	
 	return outgoingLight;
@@ -275,6 +284,21 @@ float CPURaytracer::randomValueNormalDistribution(unsigned int& seed)
 	float theta = 2 * 3.1415926 * randomValue(seed);
 	float rho = sqrt(-2 * log(randomValue(seed)));
 	return rho * cos(theta);
+}
+
+// Copilot generated this function
+glm::vec3 CPURaytracer::randomUnitVector(unsigned int& seed)
+{
+	float z = randomValueNormalDistribution(seed);
+	float a = randomValue(seed) * 2 * 3.1415926;
+	float r = sqrt(1 - z * z);
+	return glm::vec3(r * cos(a), r * sin(a), z);
+}
+
+glm::vec3 CPURaytracer::randomUnitVectorInHemisphere(unsigned int& seed, const glm::vec3& normal)
+{
+	glm::vec3 unitVector = randomUnitVector(seed);
+	return ((float)signbit(glm::dot(unitVector, normal))) * unitVector;
 }
 
 
