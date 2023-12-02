@@ -18,6 +18,8 @@ struct RayHit
 
 	std::string material;
 
+	glm::mat3 tbnMatrix;
+
 	glm::vec3 normal;
 	glm::vec3 albedo;
 	glm::vec3 roughness;

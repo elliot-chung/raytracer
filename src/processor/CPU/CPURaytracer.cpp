@@ -24,10 +24,6 @@ std::vector<float> CPURaytracer::trace(std::shared_ptr<Scene> scene, std::shared
 			Color color = singleTrace(ray, objects);
 			color = glm::vec3(1.0f) - glm::exp(-color * exposure);
 
-
-			if (x == camera->getWidth() / 2 && y == camera->getHeight() / 2)
-				std::cout << glm::to_string(ray.hitInfo.normal) << std::endl;
-
 			int i = y * camera->getWidth() + x;
 
 			output[3 * i] = color.r;
@@ -150,13 +146,37 @@ void CPURaytracer::getIntersectionPoint(Ray& ray, DisplayObject* object)
 	int i1 = indices[3 * closestTriangle + 1];
 	int i2 = indices[3 * closestTriangle + 2];
 
+	int i0uv = i0 * 2;
+	int i1uv = i1 * 2;
+	int i2uv = i2 * 2;
+
+	i0 *= 3;
+	i1 *= 3;
+	i2 *= 3;
+
 	glm::vec3 v0(vertices[i0], vertices[i0 + 1], vertices[i0 + 2]);
 	glm::vec3 v1(vertices[i1], vertices[i1 + 1], vertices[i1 + 2]);
 	glm::vec3 v2(vertices[i2], vertices[i2 + 1], vertices[i2 + 2]);
 
-	glm::vec2 uv0(uvCoords[i0], uvCoords[i0 + 1]);
-	glm::vec2 uv1(uvCoords[i1], uvCoords[i1 + 1]);
-	glm::vec2 uv2(uvCoords[i2], uvCoords[i2 + 1]);
+	glm::vec2 uv0(uvCoords[i0uv], uvCoords[i0uv + 1]);
+	glm::vec2 uv1(uvCoords[i1uv], uvCoords[i1uv + 1]);
+	glm::vec2 uv2(uvCoords[i2uv], uvCoords[i2uv + 1]);
+
+	glm::vec3 edge1 = v1 - v0;
+	glm::vec3 edge2 = v2 - v0;
+	glm::vec2 deltaUV1 = uv1 - uv0;
+	glm::vec2 deltaUV2 = uv2 - uv0;
+	
+	float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+	glm::vec3 tangent = f * (deltaUV2.y * edge1 - deltaUV1.y * edge2);
+	glm::vec3 bitangent = f * (-deltaUV2.x * edge1 + deltaUV1.x * edge2);
+
+
+	tangent = glm::normalize(glm::vec3(model * glm::vec4(tangent, 0.0f)));
+	bitangent = glm::normalize(glm::vec3(model * glm::vec4(bitangent, 0.0f)));
+	glm::vec3 normal = -glm::cross(tangent, bitangent);
+
+	glm::mat3 tbnMatrix = glm::mat3(tangent, bitangent, normal);
 
 	glm::vec3 interpPosition = barycentricCoords.x * v0 + barycentricCoords.y * v1 + barycentricCoords.z * v2;
 	glm::vec2 interpUVCoords = barycentricCoords.x * uv0 + barycentricCoords.y * uv1 + barycentricCoords.z * uv2;
@@ -167,11 +187,12 @@ void CPURaytracer::getIntersectionPoint(Ray& ray, DisplayObject* object)
 	ray.hitInfo.distance = minDistance;
 	ray.hitInfo.uv = interpUVCoords;
 	ray.hitInfo.material = object->getMaterialName();
+	ray.hitInfo.tbnMatrix = tbnMatrix;
 }
 
 void CPURaytracer::setMaterialData(Ray& ray, Material* material)
 {
-	ray.hitInfo.normal = material->getNormal(ray.hitInfo.uv.x, ray.hitInfo.uv.y);
+	ray.hitInfo.normal = ray.hitInfo.tbnMatrix * material->getNormal(ray.hitInfo.uv.x, ray.hitInfo.uv.y);
 	ray.hitInfo.albedo = glm::vec3(material->getAlbedo(ray.hitInfo.uv.x, ray.hitInfo.uv.y));
 	ray.hitInfo.roughness = glm::vec3(material->getRoughness(ray.hitInfo.uv.x, ray.hitInfo.uv.y));
 	ray.hitInfo.metal = glm::vec3(material->getMetal(ray.hitInfo.uv.x, ray.hitInfo.uv.y));
