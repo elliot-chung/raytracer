@@ -175,7 +175,7 @@ void Window::renderLoop()
     auto backend = CPURaytracer();
     Raytracer* raytracer = &backend;
     raytracer->setMaxDistance(100.0f);
-    raytracer->setBounceCount(1);
+    raytracer->setBounceCount(3);
 
     Material mat1("redmat", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), 1.0f);
     Material mat2("bluemat", glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), 1.0f);

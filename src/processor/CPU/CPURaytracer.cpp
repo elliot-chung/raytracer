@@ -21,8 +21,11 @@ std::vector<float> CPURaytracer::trace(std::shared_ptr<Scene> scene, std::shared
 			ray.direction = direction;
 			ray.bounceCount = bounceCount;
 
+			debug = x == camera->getWidth() / 2 && y == camera->getHeight() / 2;
+
 			Color color = singleTrace(ray, objects);
 			color = glm::vec3(1.0f) - glm::exp(-color * exposure);
+
 
 			int i = y * camera->getWidth() + x;
 
@@ -51,13 +54,12 @@ Color CPURaytracer::singleTrace(Ray& ray, const Scene::ObjectMap& objects)
 	Material* material = Material::getMaterial(ray.hitInfo.material);
 	setMaterialData(ray, material);
 
-
-	outgoingLight += ray.hitInfo.emission;
+	glm::vec3 aoVec(aoIntensity);
+	outgoingLight += ray.hitInfo.albedo * ray.hitInfo.ao * aoVec; // Ambient occlusion
+	outgoingLight += ray.hitInfo.emission; // Emission
 
 	if (ray.bounceCount == 0)
 	{
-		glm::vec3 aoVec(aoIntensity);
-		outgoingLight = ray.hitInfo.albedo * ray.hitInfo.ao * aoVec; // Ambient occlusion
 		return outgoingLight;
 	}
 	
@@ -67,6 +69,7 @@ Color CPURaytracer::singleTrace(Ray& ray, const Scene::ObjectMap& objects)
 	bounceRay.origin = ray.hitInfo.hitPosition;
 	bounceRay.bounceCount = ray.bounceCount - 1;
 	bounceRay.direction = randomUnitVectorInHemisphere(randomSeed, ray.hitInfo.normal);
+	bounceRay.didHit = false;
 
 
 	Color incomingLight = singleTrace(bounceRay, objects);
@@ -101,7 +104,6 @@ bool CPURaytracer::intersectsBoundingBox(const Ray& ray, const glm::vec3& minBou
 
 void CPURaytracer::getIntersectionPoint(Ray& ray, DisplayObject* object)
 {
-	
 	glm::mat4 model = object->getModelMatrix();
 	Mesh* mesh = object->getMesh();
 	auto vertices = mesh->getVertices();
@@ -139,7 +141,6 @@ void CPURaytracer::getIntersectionPoint(Ray& ray, DisplayObject* object)
 	}
 
 	if (closestTriangle == -1) return;   // Ray missed or only hit further objects, exit early
-
 
 	// Calculate interpolated position and uv coords
 	int i0 = indices[3 * closestTriangle];
@@ -180,6 +181,8 @@ void CPURaytracer::getIntersectionPoint(Ray& ray, DisplayObject* object)
 
 	glm::vec3 interpPosition = barycentricCoords.x * v0 + barycentricCoords.y * v1 + barycentricCoords.z * v2;
 	glm::vec2 interpUVCoords = barycentricCoords.x * uv0 + barycentricCoords.y * uv1 + barycentricCoords.z * uv2;
+
+	interpPosition = glm::vec3(model * glm::vec4(interpPosition, 1.0f));
 
 	// Update ray info
 	ray.didHit = true;
@@ -303,23 +306,27 @@ float CPURaytracer::randomValue(unsigned int& seed)
 float CPURaytracer::randomValueNormalDistribution(unsigned int& seed)
 {
 	float theta = 2 * 3.1415926 * randomValue(seed);
-	float rho = sqrt(-2 * log(randomValue(seed)));
+	float r = randomValue(seed);
+	float rho = sqrt(-2 * log(r));
 	return rho * cos(theta);
 }
 
-// Copilot generated this function
+
 glm::vec3 CPURaytracer::randomUnitVector(unsigned int& seed)
 {
+	float x = randomValueNormalDistribution(seed);
+	float y = randomValueNormalDistribution(seed);
 	float z = randomValueNormalDistribution(seed);
-	float a = randomValue(seed) * 2 * 3.1415926;
-	float r = sqrt(1 - z * z);
-	return glm::vec3(r * cos(a), r * sin(a), z);
+	return glm::normalize(glm::vec3(x, y, z));
 }
 
 glm::vec3 CPURaytracer::randomUnitVectorInHemisphere(unsigned int& seed, const glm::vec3& normal)
 {
 	glm::vec3 unitVector = randomUnitVector(seed);
-	return ((float)signbit(glm::dot(unitVector, normal))) * unitVector;
+	if (glm::dot(unitVector, normal) > 0.0f)
+		return unitVector;
+	else
+		return -unitVector;
 }
 
 

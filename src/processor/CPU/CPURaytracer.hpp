@@ -12,6 +12,7 @@ public:
 	std::vector<float> trace(std::shared_ptr<Scene> s, std::shared_ptr<Camera> c);
 private:
 	unsigned int randomSeed = 0;
+	bool debug = false;
 
 	Color singleTrace(Ray& ray, const Scene::ObjectMap& objects);
 
