@@ -39,8 +39,6 @@ private:
 };
 
 
-
-
 // -------------------------------------------------------------------------------------------------------- //
 class Material;
 typedef std::unordered_map<std::string, Material*> MaterialMap;

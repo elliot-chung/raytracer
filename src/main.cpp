@@ -3,11 +3,23 @@
 
 
 // Main code
-int main(int, char**)
+int main(int argc, char** argv)
 { 
-    Window window(400, 300, "Raytracer");
+    auto backend = GPURaytracer(argc, argv);
+    Raytracer* raytracer = &backend;
+
+    if (backend.didFindGPU())
+    {
+		printf("GPU Found\n");
+	}
+    else
+    {
+        printf("GPU Not Found\n");
+    }
+
+    // Window window(400, 300, "Raytracer");
     
-    window.renderLoop();
+    // window.renderLoop();
 
     return 0;
 }

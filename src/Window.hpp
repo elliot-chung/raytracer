@@ -18,6 +18,7 @@
 #include "Cube.hpp"
 #include "Material.hpp"
 #include "processor/CPU/CPURaytracer.hpp"
+#include "processor/GPU/GPURaytracer.hpp"
 
 #include "glm/gtx/string_cast.hpp"
 

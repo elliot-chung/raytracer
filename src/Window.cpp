@@ -31,7 +31,7 @@ Window::Window(int width, int height, const char* name)
         throw "Failed to initialize GLAD";
     }
 
-    // Make unique object pointers
+    // Make necessary objects
     screenShader = std::make_unique<Shader>("src/shaders/vert.shader", "src/shaders/frag.shader");
     camera = std::make_shared<Camera>(CAMERA_START_POS, glm::quat(), CAMERA_START_FOV, CAMERA_START_EXPOSURE);
     scene = std::make_shared<Scene>();
@@ -171,7 +171,6 @@ void Window::clearColorData()
 
 void Window::renderLoop()
 {
-    
     auto backend = CPURaytracer();
     Raytracer* raytracer = &backend;
     raytracer->setMaxDistance(100.0f);
@@ -193,13 +192,13 @@ void Window::renderLoop()
     scene->addToScene("cube3", &cube3);
     cube3.setMaterialName("lightmat");
 
-    // Cached values used between renders
+    
     ImGuiIO& io = ImGui::GetIO();
 
     while (!glfwWindowShouldClose(glfwWindow))
     {
         // Poll and handle events (inputs, window resize, etc.)
-        // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
+        // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wa  nts to use your inputs.
         // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
         // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
         // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
@@ -233,8 +232,6 @@ void Window::renderLoop()
         
         // Rendering
         ImGui::Render();
-        /*glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);*/
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 
@@ -274,14 +271,6 @@ void Window::displayWindowGUI(ImGuiIO& io)
 
     ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
     ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-
-    if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-    {
-        memset(&data[counter * width * 3], 0.0f, height * 3);
-        counter++;
-    }
-    ImGui::SameLine();
-    ImGui::Text("counter = %d", counter);
 
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
     ImGui::End();

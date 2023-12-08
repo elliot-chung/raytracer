@@ -46,6 +46,7 @@
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 12.3.props" />
   </ImportGroup>
   <ImportGroup Label="Shared">
   </ImportGroup>
@@ -140,6 +141,7 @@
     <ClCompile Include="src\Material.cpp" />
     <ClCompile Include="src\processor\CPU\CPURaytracer.cpp" />
     <ClCompile Include="src\processor\CPU\CPURaytracer.hpp" />
+    <ClCompile Include="src\processor\GPU\GPURaytracer.cpp" />
     <ClCompile Include="src\Window.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -404,6 +406,9 @@
     <ClInclude Include="src\ImGui\imstb_truetype.h" />
     <ClInclude Include="src\Material.hpp" />
     <ClInclude Include="src\Mesh.hpp" />
+    <ClInclude Include="src\processor\GPU\GPURaytracer.hpp" />
+    <ClInclude Include="src\processor\GPU\helper_cuda.h" />
+    <ClInclude Include="src\processor\GPU\helper_string.h" />
     <ClInclude Include="src\processor\Raytracer.hpp" />
     <ClInclude Include="src\Scene.hpp" />
     <ClInclude Include="src\Shader.hpp" />
@@ -549,5 +554,6 @@
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\CUDA 12.3.targets" />
   </ImportGroup>
 </Project>
