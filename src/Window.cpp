@@ -111,7 +111,7 @@ Window::Window(int width, int height, const char* name)
         glBindTexture(GL_TEXTURE_2D, quadTexture);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        // glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
         // Initialize texture Data
         clearColorData();
@@ -136,8 +136,6 @@ Window::Window(int width, int height, const char* name)
         }
     }
 
-    // useGPU = false; // FORCE CPU
-    
     // Setup CUDA
     if (useGPU) 
     {
@@ -179,7 +177,7 @@ Window::Window(int width, int height, const char* name)
 
 inline void Window::updateTexture()
 {
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, &data[0]);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, &data[0]);
 }
 
 int Window::addKeyCallback(const KeyCallback callback)
