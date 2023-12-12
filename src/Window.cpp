@@ -4,129 +4,182 @@ Window::Window(int width, int height, const char* name)
 {
     this->width = width;
     this->height = height;
-    if (!glfwInit())
-        throw "Failed to initialize GLFW";
 
-    // GL 3.0 + GLSL 130
-    const char* glsl_version = "#version 330";
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    //glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // Mac
-
-    // Create window with graphics context
-    glfwWindow = glfwCreateWindow(width, height, name, nullptr, nullptr);
-    if (glfwWindow == nullptr)
+    // Setup OpenGL
     {
-        std::cout << "Failed to create GLFW window" << std::endl;
-        glfwTerminate();
-        throw "Failed to create GLFW window";
-    }
-    glfwMakeContextCurrent(glfwWindow);
+        // Initialize GLFW
+        if (!glfwInit())
+            throw std::runtime_error("Failed to initialize GLFW");
 
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
-    {
-        std::cout << "Failed to initialize GLAD" << std::endl;
-        glfwTerminate();
-        throw "Failed to initialize GLAD";
-    }
+        // OpenGL 3.3 Core Profile
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+        //glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // Mac
 
-    // Make necessary objects
-    screenShader = std::make_unique<Shader>("src/shaders/vert.shader", "src/shaders/frag.shader");
-    camera = std::make_shared<Camera>(CAMERA_START_POS, glm::quat(), CAMERA_START_FOV, CAMERA_START_EXPOSURE);
-    scene = std::make_shared<Scene>();
-
-    camera->calcRays(width, height);
-    
-    
-    
-
-    glfwSetWindowUserPointer(glfwWindow, this); // Set User Pointer
-
-    addKeyCallback([this](int key, int scancode, int action, int mods)
+        // Create glfwWindow
+        glfwWindow = glfwCreateWindow(width, height, name, nullptr, nullptr);
+        if (glfwWindow == nullptr)
         {
-            if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
-                glfwSetWindowShouldClose(glfwWindow, true);
-        });
+            glfwTerminate();
+            throw std::runtime_error("Failed to create GLFW window");
+        }
+        glfwMakeContextCurrent(glfwWindow);
 
-    glfwSetKeyCallback(glfwWindow, [](GLFWwindow* window, int key, int scancode, int action, int mods)
+        // Initialize GLAD
+        if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
         {
-            Window* win = (Window*)glfwGetWindowUserPointer(window);
-            win->keyCallback(key, scancode, action, mods);
-        });
+            glfwTerminate();
+            throw std::runtime_error("Failed to initialize GLAD");
+        }
 
-    glfwSetCursorPosCallback(glfwWindow, [](GLFWwindow* window, double xpos, double ypos)
-        {
-            Window* win = (Window*)glfwGetWindowUserPointer(window);
-            win->mouseMoveCallback(xpos, ypos);
-        });
+        // Set Callbacks
+        glfwSetWindowUserPointer(glfwWindow, this); // Set User Pointer
 
-    glfwSetFramebufferSizeCallback(glfwWindow, [](GLFWwindow* window, int width, int height)
-        {
-            Window* win = (Window*)glfwGetWindowUserPointer(window);
-            win->resizeCallback(width, height);
-        }); // Set Resize Callback
+        addKeyCallback([this](int key, int scancode, int action, int mods)
+            {
+                if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+                    glfwSetWindowShouldClose(glfwWindow, true);
+            });
 
-    // Setup Dear ImGui context
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO();
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // Enable Docking
-    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
-    //io.ConfigViewportsNoAutoMerge = true;
-    //io.ConfigViewportsNoTaskBarIcon = true;
+        glfwSetKeyCallback(glfwWindow, [](GLFWwindow* window, int key, int scancode, int action, int mods)
+            {
+                Window* win = (Window*)glfwGetWindowUserPointer(window);
+                win->keyCallback(key, scancode, action, mods);
+            });
 
-    // Setup Dear ImGui style
-    ImGui::StyleColorsDark();
-    //ImGui::StyleColorsLight();
+        glfwSetCursorPosCallback(glfwWindow, [](GLFWwindow* window, double xpos, double ypos)
+            {
+                Window* win = (Window*)glfwGetWindowUserPointer(window);
+                win->mouseMoveCallback(xpos, ypos);
+            });
 
-    // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
-    ImGuiStyle& style = ImGui::GetStyle();
-    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-    {
-        style.WindowRounding = 0.0f;
-        style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+        glfwSetFramebufferSizeCallback(glfwWindow, [](GLFWwindow* window, int width, int height)
+            {
+                Window* win = (Window*)glfwGetWindowUserPointer(window);
+                win->resizeCallback(width, height);
+            }); // Set Resize Callback
     }
 
-    // Setup Platform/Renderer backends
-    ImGui_ImplGlfw_InitForOpenGL(glfwWindow, true);
-    ImGui_ImplOpenGL3_Init(glsl_version);
+    // Setup Dear ImGui
+    {
+        const char* glsl_version = "#version 330";
+        IMGUI_CHECKVERSION();
+        ImGui::CreateContext();
+        ImGuiIO& io = ImGui::GetIO();
+        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+        io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // Enable Docking
+        io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
+        //io.ConfigViewportsNoAutoMerge = true;
+        //io.ConfigViewportsNoTaskBarIcon = true;
+
+        // Setup Dear ImGui style
+        ImGui::StyleColorsDark();
+        //ImGui::StyleColorsLight();
+
+        // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
+        ImGuiStyle& style = ImGui::GetStyle();
+        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        {
+            style.WindowRounding = 0.0f;
+            style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+        }
+
+        // Setup Platform/Renderer backends
+        ImGui_ImplGlfw_InitForOpenGL(glfwWindow, true);
+        ImGui_ImplOpenGL3_Init(glsl_version);
+    }
 
     // Setup fullscreen quad 
-    unsigned int quadVBO;
-    glGenVertexArrays(1, &quadVAO);
-    glGenBuffers(1, &quadVBO);
-    glBindVertexArray(quadVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+    {
+        unsigned int quadVBO;
+        glGenVertexArrays(1, &quadVAO);
+        glGenBuffers(1, &quadVBO);
+        glBindVertexArray(quadVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+        glEnableVertexAttribArray(0);
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(1);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
 
-    screenShader->use();
-    screenShader->setInt("screenTexture", 0);
+        glEnable(GL_FRAMEBUFFER_SRGB); // Gamma Correction
 
-    // Initialize Data
-    clearColorData();
+        // generate texture  
+        glGenTextures(1, &quadTexture);
+        glBindTexture(GL_TEXTURE_2D, quadTexture);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-    // Gamma Correction
-    glEnable(GL_FRAMEBUFFER_SRGB);
+        // Initialize texture Data
+        clearColorData();
+        updateTexture();
+    }
 
-    // generate texture  
-    glGenTextures(1, &quadTexture);
-    glBindTexture(GL_TEXTURE_2D, quadTexture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-    updateTexture();
+    // Check for CUDA devices
+    {
+        unsigned int numDevices = CUDA_DEVICE_COUNT;
+        int devices[CUDA_DEVICE_COUNT];
+
+        cudaGLGetDevices(&numDevices, devices, numDevices, cudaGLDeviceListAll);
+        if (numDevices == 0)
+        {
+            useGPU = false;
+            std::cout << "No CUDA devices found" << std::endl;
+        }
+        else
+        {
+            useGPU = true;
+            std::cout << "Found " << numDevices << " CUDA devices" << std::endl;
+        }
+    }
+
+    // useGPU = false; // FORCE CPU
+    
+    // Setup CUDA
+    if (useGPU) 
+    {
+        cudaArray* internalArray;
+        cudaGraphicsResource* resource;
+
+        cudaGraphicsGLRegisterImage(&resource, quadTexture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard);
+  
+        cudaGraphicsMapResources(1, &resource, 0);
+
+        cudaGraphicsSubResourceGetMappedArray(&internalArray, resource, 0, 0);
+        
+        cudaResourceDesc resDesc;
+
+        memset(&resDesc, 0, sizeof(resDesc));
+        
+        resDesc.resType = cudaResourceTypeArray;
+
+        resDesc.res.array.array = internalArray;
+
+        cudaCreateSurfaceObject(&bitmap_surface, &resDesc);
+    }
+
+    // Heap allocate objects
+    {
+        screenShader = std::make_unique<Shader>("src/shaders/vert.shader", "src/shaders/frag.shader");
+        camera = std::make_shared<Camera>(CAMERA_START_POS, glm::quat(), CAMERA_START_FOV, CAMERA_START_EXPOSURE);
+        scene = std::make_shared<Scene>();
+
+        rtCPU = std::make_unique<CPURaytracer>();
+        rtGPU = std::make_unique<GPURaytracer>();
+
+        screenShader->use();
+        screenShader->setInt("screenTexture", 0);
+
+        camera->calcRays(width, height);
+    }
 }
 
 inline void Window::updateTexture()
 {
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_FLOAT, &data[0]);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, &data[0]);
 }
 
 int Window::addKeyCallback(const KeyCallback callback)
@@ -166,15 +219,14 @@ int Window::deactivateMouseMoveCallback(int id)
 
 void Window::clearColorData()
 {
-    data = std::vector<float>(width * height * 3, 0.5f);
+    data = std::vector<float>(width * height * 4, 0.5f);
 }
 
 void Window::renderLoop()
 {
-    auto backend = CPURaytracer();
-    Raytracer* raytracer = &backend;
-    raytracer->setMaxDistance(100.0f);
-    raytracer->setBounceCount(3);
+    // Setup Scene (this is temporary)
+    rtCPU->setMaxDistance(100.0f);
+    rtCPU->setBounceCount(3);
 
     Material mat1("redmat", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), 1.0f);
     Material mat2("bluemat", glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), 1.0f);
@@ -220,11 +272,19 @@ void Window::renderLoop()
         camera->update(io);
         scene->update(io);
         
-        data = raytracer->trace(scene, camera);
+        if (useGPU)
+        {
+            rtGPU->trace(scene, camera, bitmap_surface);
+        }
+        else
+        {
+            data = rtCPU->trace(scene, camera);
+            updateTexture();
+        }
+            
         
         //----------------------------
 
-        updateTexture();
         glBindVertexArray(quadVAO);
         glBindTexture(GL_TEXTURE_2D, quadTexture);
         glDrawArrays(GL_TRIANGLES, 0, 6);

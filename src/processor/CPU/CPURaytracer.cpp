@@ -6,7 +6,7 @@
 std::vector<float> CPURaytracer::trace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera> camera)
 {
 	Scene::ObjectMap objects = scene->getObjects();
-	std::vector<float> output(camera->getPixelCount() * 3, 1.0f);
+	std::vector<float> output(camera->getPixelCount() * 4, 1.0f);
 
 	glm::vec3 origin = camera->getPosition();
 	float exposure = camera->getExposure();
@@ -29,9 +29,9 @@ std::vector<float> CPURaytracer::trace(std::shared_ptr<Scene> scene, std::shared
 
 			int i = y * camera->getWidth() + x;
 
-			output[3 * i] = color.r;
-			output[3 * i + 1] = color.g;
-			output[3 * i + 2] = color.b;
+			output[4 * i] = color.r;
+			output[4 * i + 1] = color.g;
+			output[4 * i + 2] = color.b;
 		}
 	}
 	return output;

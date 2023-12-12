@@ -9,7 +9,7 @@
 class CPURaytracer : public Raytracer
 {
 public:
-	std::vector<float> trace(std::shared_ptr<Scene> s, std::shared_ptr<Camera> c) override;
+	std::vector<float> trace(std::shared_ptr<Scene> s, std::shared_ptr<Camera> c);
 private:
 	unsigned int randomSeed = 0;
 	bool debug = false;

@@ -43,15 +43,10 @@ typedef glm::vec3 Color;
 class Raytracer
 {
 public:
-	virtual std::vector<float> trace(std::shared_ptr<Scene> s, std::shared_ptr<Camera> c) = 0;
-
 	inline void setBounceCount(int count) { bounceCount = count; }
 	inline void setMaxDistance(float distance) { maxDistance = distance; }
 	inline void setAOIntensity(float intensity) { aoIntensity = intensity; }
-	inline bool didFindGPU() { return gpuFound; }
 protected:
-	bool gpuFound = false;
-
 	int bounceCount = 0;
 	float maxDistance = 0.0f;
 

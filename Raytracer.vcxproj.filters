@@ -57,9 +57,6 @@
     <ClCompile Include="src\ImGui\imgui_impl_glfw.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\processor\GPU\GPURaytracer.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\glad\glad.h">
@@ -866,12 +863,6 @@
     <ClInclude Include="src\processor\GPU\GPURaytracer.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\processor\GPU\helper_cuda.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\processor\GPU\helper_string.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="include\glm\detail\func_common.inl">
@@ -1276,5 +1267,8 @@
     <None Include="include\glm\gtx\wrap.inl">
       <Filter>Header Files</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="src\processor\GPU\GPURaytracer.cu" />
   </ItemGroup>
 </Project>

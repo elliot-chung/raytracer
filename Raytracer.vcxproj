@@ -141,7 +141,6 @@
     <ClCompile Include="src\Material.cpp" />
     <ClCompile Include="src\processor\CPU\CPURaytracer.cpp" />
     <ClCompile Include="src\processor\CPU\CPURaytracer.hpp" />
-    <ClCompile Include="src\processor\GPU\GPURaytracer.cpp" />
     <ClCompile Include="src\Window.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -407,8 +406,6 @@
     <ClInclude Include="src\Material.hpp" />
     <ClInclude Include="src\Mesh.hpp" />
     <ClInclude Include="src\processor\GPU\GPURaytracer.hpp" />
-    <ClInclude Include="src\processor\GPU\helper_cuda.h" />
-    <ClInclude Include="src\processor\GPU\helper_string.h" />
     <ClInclude Include="src\processor\Raytracer.hpp" />
     <ClInclude Include="src\Scene.hpp" />
     <ClInclude Include="src\Shader.hpp" />
@@ -551,6 +548,9 @@
     <None Include="include\glm\gtx\vector_angle.inl" />
     <None Include="include\glm\gtx\vector_query.inl" />
     <None Include="include\glm\gtx\wrap.inl" />
+  </ItemGroup>
+  <ItemGroup>
+    <CudaCompile Include="src\processor\GPU\GPURaytracer.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

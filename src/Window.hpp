@@ -8,9 +8,12 @@
 #include "ImGui/imgui.h"
 #include "ImGui/imgui_impl_glfw.h"
 #include "ImGui/imgui_impl_opengl3.h"
+#include "glm/gtx/string_cast.hpp"
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h> 
+
+#include <cuda_gl_interop.h>
 
 #include "Shader.hpp"
 #include "Camera.hpp"
@@ -20,11 +23,13 @@
 #include "processor/CPU/CPURaytracer.hpp"
 #include "processor/GPU/GPURaytracer.hpp"
 
-#include "glm/gtx/string_cast.hpp"
+
 
 #define CAMERA_START_POS glm::vec3(0.0f, 0.0f, 10.0f)
 #define CAMERA_START_FOV 45.0f
 #define CAMERA_START_EXPOSURE 1.0f
+
+#define CUDA_DEVICE_COUNT 16
 
 typedef const std::function<void(int key, int scancode, int action, int mods)> KeyCallback;
 typedef const std::function<void(double xpos, double ypos)> MouseMoveCallback;
@@ -63,11 +68,15 @@ private:
     void resizeCallback(int width, int height);
 
     std::unique_ptr<Shader> screenShader;
+    std::unique_ptr<CPURaytracer> rtCPU;
+    std::unique_ptr<GPURaytracer> rtGPU;
     std::shared_ptr<Camera> camera;
     std::shared_ptr<Scene> scene;
 
     unsigned int quadVAO{ 0 };
     unsigned int quadTexture{ 0 };
+
+    cudaSurfaceObject_t bitmap_surface = 0;
 
     int width, height;
     std::vector<float> data;
@@ -83,10 +92,10 @@ private:
          1.0f,  1.0f,  1.0f, 1.0f
     };
 
+    bool useGPU = false;
+
     void updateTexture();
 
-
-    // GUI functions
     void displayWindowGUI(ImGuiIO& io);
 
     
