@@ -5,16 +5,6 @@
 int main(int argc, char** argv)
 { 
     Window window(400, 300, "Raytracer");
-
-    
-
-
-    
-
-
-	
-
-    
     
     window.renderLoop();
 

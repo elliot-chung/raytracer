@@ -32,6 +32,7 @@ std::vector<float> CPURaytracer::trace(std::shared_ptr<Scene> scene, std::shared
 			output[4 * i] = color.r;
 			output[4 * i + 1] = color.g;
 			output[4 * i + 2] = color.b;
+			// output[4 * i + 3] = 1.0f; Uneeded, already set to 1.0f (keep for clarity)
 		}
 	}
 	return output;

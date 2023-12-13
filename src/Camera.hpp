@@ -1,18 +1,18 @@
 #pragma once
 
 #include <vector>
-
+#include <iostream>
 #include "ImGui/imgui.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-
+#include "cuda_runtime.h"
 
 class Camera
 {
 public:
-    Camera(glm::vec3& position, glm::quat& rotation, float fov, float exposure) : Position(position), Rotation(rotation), verticalFOV(fov), exposureValue(exposure) { }
+    Camera(glm::vec3& position, glm::quat& rotation, float fov, float exposure, bool cuda) : Position(position), Rotation(rotation), verticalFOV(fov), exposureValue(exposure), useGPU(cuda) { }
 
     
     virtual void update(ImGuiIO& io) {}
@@ -49,11 +49,11 @@ public:
         const float xOffset = wStep * (width / 2);
         const float yOffset = hStep * (height / 2);
 
-        const glm::vec3 forward = glm::vec3(0.0f, 0.0f, -1.0f);
-        const glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
-        const glm::vec3 right = glm::vec3(1.0f, 0.0f, 0.0f);
+        const glm::vec4 forward = glm::vec4(0.0f, 0.0f, -1.0f, 0.0f);
+        const glm::vec4 up = glm::vec4(0.0f, 1.0f, 0.0f, 0.0f);
+        const glm::vec4 right = glm::vec4(1.0f, 0.0f, 0.0f, 0.0f);
 
-        preTransformRays = std::vector<glm::vec3>(width * height, forward);
+        preTransformRays = std::vector<glm::vec4>(width * height, forward);
         for (int j = 0; j < height; j++) {
             for (int i = 0; i < width; i++) {
                 float rFactor = (float)((i * wStep) - xOffset);
@@ -62,6 +62,37 @@ public:
                 int index = j * width + i;
                 preTransformRays[index] = glm::normalize(forward + rFactor * right + uFactor * up);
             }
+        }
+
+        // If CUDA is enabled, send rays to GPU
+        if (useGPU) {
+            if (cudaPreTransformRays != 0) cudaDestroyTextureObject(cudaPreTransformRays);
+
+            cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc(32, 32, 32, 32, cudaChannelFormatKindFloat);
+            cudaArray_t cuArray;
+            cudaMallocArray(&cuArray, &channelDesc, width, height);
+
+            const size_t spitch = width * sizeof(glm::vec4);
+            cudaMemcpy2DToArray(cuArray, 0, 0, &preTransformRays[0].x, spitch, width * sizeof(glm::vec4), height, cudaMemcpyHostToDevice);
+            
+
+            // Specify texture
+            struct cudaResourceDesc resDesc;
+            memset(&resDesc, 0, sizeof(resDesc));
+            resDesc.resType = cudaResourceTypeArray;
+            resDesc.res.array.array = cuArray;
+
+            // Specify texture object parameters
+            struct cudaTextureDesc texDesc;
+            memset(&texDesc, 0, sizeof(texDesc));
+            texDesc.addressMode[0] = cudaAddressModeClamp;
+            texDesc.addressMode[1] = cudaAddressModeClamp;
+            texDesc.filterMode = cudaFilterModeLinear;
+            texDesc.readMode = cudaReadModeElementType;
+            texDesc.normalizedCoords = 0; 
+
+            // Create texture object
+            cudaCreateTextureObject(&cudaPreTransformRays, &resDesc, &texDesc, NULL);
         }
     }
 
@@ -76,14 +107,20 @@ public:
     inline glm::quat getRotation() { return Rotation; }
     inline void setPosition(glm::vec3 position) { Position = position; }
     inline void setRotation(glm::quat rotation) { Rotation = rotation; }
+
+    inline cudaTextureObject_t getCudaRays() { return cudaPreTransformRays; }
 private:
     glm::vec3 Position;
     glm::quat Rotation;
 
-    std::vector<glm::vec3> preTransformRays;
+    std::vector<glm::vec4> preTransformRays;
+    cudaTextureObject_t    cudaPreTransformRays = 0;
+
     int width = 0;
     int height = 0;
 
     float verticalFOV;
     float exposureValue;
+
+    bool useGPU = false;
 };

@@ -48,6 +48,7 @@ class Material
 public:
 	Material(char const* name, glm::vec4 albedo = {}, float roughness = 0.0f, float metal = 0.0f, glm::vec3 emissionColor = {}, float emission = 0);
 	~Material();
+	Material(const Material&) = delete;
 
 	inline std::string getName() { return materialName; }
 	inline bool getSuccess() { return success; }

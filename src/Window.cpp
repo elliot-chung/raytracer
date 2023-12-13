@@ -91,7 +91,7 @@ Window::Window(int width, int height, const char* name)
         ImGui_ImplOpenGL3_Init(glsl_version);
     }
 
-    // Setup fullscreen quad 
+    // Setup fullscreen quad in OpenGL
     {
         unsigned int quadVBO;
         glGenVertexArrays(1, &quadVAO);
@@ -162,7 +162,7 @@ Window::Window(int width, int height, const char* name)
     // Heap allocate objects
     {
         screenShader = std::make_unique<Shader>("src/shaders/vert.shader", "src/shaders/frag.shader");
-        camera = std::make_shared<Camera>(CAMERA_START_POS, glm::quat(), CAMERA_START_FOV, CAMERA_START_EXPOSURE);
+        camera = std::make_shared<Camera>(CAMERA_START_POS, glm::quat(), CAMERA_START_FOV, CAMERA_START_EXPOSURE, useGPU);
         scene = std::make_shared<Scene>();
 
         rtCPU = std::make_unique<CPURaytracer>();
@@ -179,7 +179,6 @@ inline void Window::updateTexture()
 {
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, &data[0]);
 }
-
 int Window::addKeyCallback(const KeyCallback callback)
 {
     keyCallbacks.push_back(std::make_pair(true, callback));
@@ -214,7 +213,6 @@ int Window::deactivateMouseMoveCallback(int id)
     mouseMoveCallbacks[id].first = false;
     return id;
 }
-
 void Window::clearColorData()
 {
     data = std::vector<float>(width * height * 4, 0.5f);
