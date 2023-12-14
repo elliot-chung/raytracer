@@ -136,6 +136,8 @@ Window::Window(int width, int height, const char* name)
         }
     }
 
+    useGPU = false;
+
     // Associate OpenGL texture with CUDA surface
     if (useGPU)
     {
@@ -361,9 +363,18 @@ void Window::resizeCallback(int width, int height)
 
     clearColorData();
 
-    checkCudaErrors(cudaGraphicsUnmapResources(1, &resource, 0));
-    checkCudaErrors(cudaGraphicsUnregisterResource(resource));
-    updateTexture();
-    checkCudaErrors(cudaGraphicsGLRegisterImage(&resource, quadTexture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard));
-    createSurfaceObject();
+    if (useGPU)
+    {
+        checkCudaErrors(cudaGraphicsUnmapResources(1, &resource, 0));
+        checkCudaErrors(cudaGraphicsUnregisterResource(resource));
+        updateTexture();
+        checkCudaErrors(cudaGraphicsGLRegisterImage(&resource, quadTexture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard));
+        createSurfaceObject();
+    }
+    else
+    {
+        camera->setHeight(height);
+        camera->setWidth(width);
+        camera->calcRays();
+    }
 }
