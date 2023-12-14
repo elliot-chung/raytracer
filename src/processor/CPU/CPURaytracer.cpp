@@ -3,7 +3,7 @@
 #include <iostream>
 #include <glm/gtx/string_cast.hpp>
 
-std::vector<float> CPURaytracer::trace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera> camera)
+std::vector<float> CPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera> camera)
 {
 	Scene::ObjectMap objects = scene->getObjects();
 	std::vector<float> output(camera->getPixelCount() * 4, 1.0f);

@@ -20,8 +20,10 @@
 #include "Scene.hpp"
 #include "Cube.hpp"
 #include "Material.hpp"
+#include "helper_cuda.h"
 #include "processor/CPU/CPURaytracer.hpp"
 #include "processor/GPU/GPURaytracer.hpp"
+
 
 
 
@@ -77,6 +79,7 @@ private:
     unsigned int quadTexture{ 0 };
 
     cudaSurfaceObject_t bitmap_surface = 0;
+    cudaGraphicsResource* resource = 0;
 
     int width, height;
     std::vector<float> data;
@@ -98,7 +101,6 @@ private:
 
     void displayWindowGUI(ImGuiIO& io);
 
-    
-
+    void createSurfaceObject();
     
 };

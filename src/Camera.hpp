@@ -29,17 +29,16 @@ public:
 			Rotation = glm::quat(glm::radians(euler));
 		}
         if (ImGui::Button("Recalculate Rays")) {
-            calcRays(width, height);
+            width = io.DisplaySize.x;
+            height = io.DisplaySize.y;
+            calcRays();  
 		}
 		ImGui::End();
 	}
     
 
-    void calcRays(int width, int height)
+    void calcRays()
     {
-        this->width = width;
-        this->height = height;
-
         const float virtualHeight = glm::tan(glm::radians(verticalFOV / 2)) * 2;
         const float virtualWidth = virtualHeight * width / height;
 
@@ -66,7 +65,7 @@ public:
 
         // If CUDA is enabled, send rays to GPU
         if (useGPU) {
-            if (cudaPreTransformRays != 0) cudaDestroyTextureObject(cudaPreTransformRays);
+            if (cudaPreTransformRays) cudaDestroyTextureObject(cudaPreTransformRays);
 
             cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc(32, 32, 32, 32, cudaChannelFormatKindFloat);
             cudaArray_t cuArray;
@@ -93,6 +92,7 @@ public:
 
             // Create texture object
             cudaCreateTextureObject(&cudaPreTransformRays, &resDesc, &texDesc, NULL);
+            
         }
     }
 
@@ -107,6 +107,8 @@ public:
     inline glm::quat getRotation() { return Rotation; }
     inline void setPosition(glm::vec3 position) { Position = position; }
     inline void setRotation(glm::quat rotation) { Rotation = rotation; }
+    inline void setHeight(int height) { this->height = height; }
+    inline void setWidth(int width) { this->width = width; }
 
     inline cudaTextureObject_t getCudaRays() { return cudaPreTransformRays; }
 private:

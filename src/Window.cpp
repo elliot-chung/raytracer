@@ -136,27 +136,12 @@ Window::Window(int width, int height, const char* name)
         }
     }
 
-    // Setup CUDA
-    if (useGPU) 
+    // Associate OpenGL texture with CUDA surface
+    if (useGPU)
     {
-        cudaArray* internalArray;
-        cudaGraphicsResource* resource;
+        checkCudaErrors(cudaGraphicsGLRegisterImage(&resource, quadTexture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard));
 
-        cudaGraphicsGLRegisterImage(&resource, quadTexture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard);
-  
-        cudaGraphicsMapResources(1, &resource, 0);
-
-        cudaGraphicsSubResourceGetMappedArray(&internalArray, resource, 0, 0);
-        
-        cudaResourceDesc resDesc;
-
-        memset(&resDesc, 0, sizeof(resDesc));
-        
-        resDesc.resType = cudaResourceTypeArray;
-
-        resDesc.res.array.array = internalArray;
-
-        cudaCreateSurfaceObject(&bitmap_surface, &resDesc);
+        createSurfaceObject();
     }
 
     // Heap allocate objects
@@ -171,12 +156,15 @@ Window::Window(int width, int height, const char* name)
         screenShader->use();
         screenShader->setInt("screenTexture", 0);
 
-        camera->calcRays(width, height);
+        camera->setHeight(height);
+        camera->setWidth(width);
+        camera->calcRays();
     }
 }
 
 inline void Window::updateTexture()
 {
+    glBindTexture(GL_TEXTURE_2D, quadTexture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, &data[0]);
 }
 int Window::addKeyCallback(const KeyCallback callback)
@@ -216,6 +204,26 @@ int Window::deactivateMouseMoveCallback(int id)
 void Window::clearColorData()
 {
     data = std::vector<float>(width * height * 4, 0.5f);
+}
+void Window::createSurfaceObject()
+{
+    if (bitmap_surface) checkCudaErrors(cudaDestroySurfaceObject(bitmap_surface));
+
+    checkCudaErrors(cudaGraphicsMapResources(1, &resource, 0));
+
+    cudaArray* internalArray;
+
+    checkCudaErrors(cudaGraphicsSubResourceGetMappedArray(&internalArray, resource, 0, 0));
+
+    cudaResourceDesc resDesc;
+
+    memset(&resDesc, 0, sizeof(resDesc));
+
+    resDesc.resType = cudaResourceTypeArray;
+
+    resDesc.res.array.array = internalArray;
+
+    checkCudaErrors(cudaCreateSurfaceObject(&bitmap_surface, &resDesc));
 }
 
 void Window::renderLoop()
@@ -257,7 +265,6 @@ void Window::renderLoop()
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
-        
 
 
         displayWindowGUI(io);
@@ -270,11 +277,11 @@ void Window::renderLoop()
         
         if (useGPU)
         {
-            rtGPU->trace(scene, camera, bitmap_surface);
+            rtGPU->raytrace(scene, camera, bitmap_surface);
         }
         else
         {
-            data = rtCPU->trace(scene, camera);
+            data = rtCPU->raytrace(scene, camera);
             updateTexture();
         }
             
@@ -351,6 +358,12 @@ void Window::resizeCallback(int width, int height)
     glViewport(0, 0, width, height);
     this->width = width;
     this->height = height;
+
     clearColorData();
-    camera->calcRays(width, height);
+
+    checkCudaErrors(cudaGraphicsUnmapResources(1, &resource, 0));
+    checkCudaErrors(cudaGraphicsUnregisterResource(resource));
+    updateTexture();
+    checkCudaErrors(cudaGraphicsGLRegisterImage(&resource, quadTexture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard));
+    createSurfaceObject();
 }
