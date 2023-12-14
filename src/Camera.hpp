@@ -12,10 +12,15 @@
 class Camera
 {
 public:
-    Camera(glm::vec3& position, glm::quat& rotation, float fov, float exposure, bool cuda) : Position(position), Rotation(rotation), verticalFOV(fov), exposureValue(exposure), useGPU(cuda) { }
+    Camera(glm::vec3& position, glm::quat& rotation, float fov, float exposure, bool* cuda) : Position(position), Rotation(rotation), verticalFOV(fov), exposureValue(exposure), useGPU(cuda) { }
 
     
-    virtual void update(ImGuiIO& io) {}
+    virtual void update(ImGuiIO& io) 
+    {
+        if (preTransformRays.size() != width * height) {
+			calcRays();
+		}
+    }
 
     void updateGUI(ImGuiIO& io)
     {
@@ -23,14 +28,12 @@ public:
 		ImGui::Begin("Camera");
         ImGui::DragFloat3("Position", &Position[0], 0.1f);
         ImGui::DragFloat3("Rotation", &euler[0], 1.0f, -359.9f, 359.9f);
-        ImGui::DragFloat("FOV", &verticalFOV, 1.0f, -179.9f, 179.9f);
         ImGui::DragFloat("Exposure", &exposureValue, 0.1f, 0.0f);
         if (euler != glm::degrees(glm::eulerAngles(Rotation))) {
 			Rotation = glm::quat(glm::radians(euler));
 		}
+        ImGui::DragFloat("FOV", &verticalFOV, 1.0f, -179.9f, 179.9f);
         if (ImGui::Button("Recalculate Rays")) {
-            width = io.DisplaySize.x;
-            height = io.DisplaySize.y;
             calcRays();  
 		}
 		ImGui::End();
@@ -64,7 +67,7 @@ public:
         }
 
         // If CUDA is enabled, send rays to GPU
-        if (useGPU) {
+        if (*useGPU) {
             if (cudaPreTransformRays) cudaDestroyTextureObject(cudaPreTransformRays);
 
             cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc(32, 32, 32, 32, cudaChannelFormatKindFloat);
@@ -124,5 +127,5 @@ private:
     float verticalFOV;
     float exposureValue;
 
-    bool useGPU = false;
+    bool* useGPU = 0;
 };

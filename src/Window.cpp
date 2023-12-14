@@ -126,30 +126,27 @@ Window::Window(int width, int height, const char* name)
         cudaGLGetDevices(&numDevices, devices, numDevices, cudaGLDeviceListAll);
         if (numDevices == 0)
         {
-            useGPU = false;
+            availableGPU = false;
             std::cout << "No CUDA devices found" << std::endl;
         }
         else
         {
-            useGPU = true;
+            availableGPU = true;
             std::cout << "Found " << numDevices << " CUDA devices" << std::endl;
         }
     }
 
-    useGPU = false;
+    // availableGPU = false;
 
     // Associate OpenGL texture with CUDA surface
-    if (useGPU)
-    {
-        checkCudaErrors(cudaGraphicsGLRegisterImage(&resource, quadTexture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard));
-
-        createSurfaceObject();
-    }
+    if (availableGPU) useGPU = true;
+       
+   
 
     // Heap allocate objects
     {
         screenShader = std::make_unique<Shader>("src/shaders/vert.shader", "src/shaders/frag.shader");
-        camera = std::make_shared<Camera>(CAMERA_START_POS, glm::quat(), CAMERA_START_FOV, CAMERA_START_EXPOSURE, useGPU);
+        camera = std::make_shared<Camera>(CAMERA_START_POS, glm::quat(), CAMERA_START_FOV, CAMERA_START_EXPOSURE, &usingGPU);
         scene = std::make_shared<Scene>();
 
         rtCPU = std::make_unique<CPURaytracer>();
@@ -160,7 +157,6 @@ Window::Window(int width, int height, const char* name)
 
         camera->setHeight(height);
         camera->setWidth(width);
-        camera->calcRays();
     }
 }
 
@@ -268,6 +264,22 @@ void Window::renderLoop()
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
+        if (useGPU && !usingGPU)
+        {
+            checkCudaErrors(cudaGraphicsGLRegisterImage(&resource, quadTexture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard));
+
+            createSurfaceObject();
+
+            usingGPU = true;
+        }
+		else if (!useGPU && usingGPU)
+		{
+			checkCudaErrors(cudaGraphicsUnmapResources(1, &resource, 0));
+			checkCudaErrors(cudaGraphicsUnregisterResource(resource));
+
+			usingGPU = false;
+		}
+
 
         displayWindowGUI(io);
         camera->updateGUI(io);  
@@ -277,7 +289,7 @@ void Window::renderLoop()
         camera->update(io);
         scene->update(io);
         
-        if (useGPU)
+        if (usingGPU)
         {
             rtGPU->raytrace(scene, camera, bitmap_surface);
         }
@@ -332,10 +344,10 @@ void Window::displayWindowGUI(ImGuiIO& io)
 
     if (show_demo_window) ImGui::ShowDemoWindow(&show_demo_window);
 
-    ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+    ImGui::Begin("Inspector");                          // Create a window called "Hello, world!" and append into it.
 
-    ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-    ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
+    ImGui::Checkbox("Use GPU", &useGPU);      
+    ImGui::Checkbox("Demo Window", &show_demo_window);      
 
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
     ImGui::End();
@@ -363,7 +375,7 @@ void Window::resizeCallback(int width, int height)
 
     clearColorData();
 
-    if (useGPU)
+    if (usingGPU)
     {
         checkCudaErrors(cudaGraphicsUnmapResources(1, &resource, 0));
         checkCudaErrors(cudaGraphicsUnregisterResource(resource));
@@ -371,10 +383,10 @@ void Window::resizeCallback(int width, int height)
         checkCudaErrors(cudaGraphicsGLRegisterImage(&resource, quadTexture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard));
         createSurfaceObject();
     }
-    else
+    
+
     {
         camera->setHeight(height);
         camera->setWidth(width);
-        camera->calcRays();
     }
 }

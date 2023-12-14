@@ -95,7 +95,9 @@ private:
          1.0f,  1.0f,  1.0f, 1.0f
     };
 
+    bool availableGPU = false;
     bool useGPU = false;
+    bool usingGPU = false;
 
     void updateTexture();
 
