@@ -1,5 +1,8 @@
 #include "Window.hpp"
 
+bool usingGPU;
+bool availableGPU;
+
 Window::Window(int width, int height, const char* name)
 {
     this->width = width;
@@ -134,19 +137,13 @@ Window::Window(int width, int height, const char* name)
             availableGPU = true;
             std::cout << "Found " << numDevices << " CUDA devices" << std::endl;
         }
+        useGPU = availableGPU;
     }
-
-    // availableGPU = false;
-
-    // Associate OpenGL texture with CUDA surface
-    if (availableGPU) useGPU = true;
-       
-   
 
     // Heap allocate objects
     {
         screenShader = std::make_unique<Shader>("src/shaders/vert.shader", "src/shaders/frag.shader");
-        camera = std::make_shared<Camera>(CAMERA_START_POS, glm::quat(), CAMERA_START_FOV, CAMERA_START_EXPOSURE, &usingGPU);
+        camera = std::make_shared<Camera>(CAMERA_START_POS, glm::quat(), CAMERA_START_FOV, CAMERA_START_EXPOSURE);
         scene = std::make_shared<Scene>();
 
         rtCPU = std::make_unique<CPURaytracer>();
@@ -230,6 +227,9 @@ void Window::renderLoop()
     rtCPU->setMaxDistance(100.0f);
     rtCPU->setBounceCount(3);
 
+    rtGPU->setMaxDistance(100.0f);
+    rtGPU->setBounceCount(3);
+
     Material mat1("redmat", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), 1.0f);
     Material mat2("bluemat", glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), 1.0f);
     Material mat3("lightmat", glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0.0f, glm::vec3(1.0f, 1.0f, 1.0f), 10.0f);
@@ -251,11 +251,6 @@ void Window::renderLoop()
 
     while (!glfwWindowShouldClose(glfwWindow))
     {
-        // Poll and handle events (inputs, window resize, etc.)
-        // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wa  nts to use your inputs.
-        // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
-        // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
-        // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
         glfwPollEvents();
 
         
@@ -264,31 +259,30 @@ void Window::renderLoop()
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
+        // Toggle cuda surface object
         if (useGPU && !usingGPU)
         {
             checkCudaErrors(cudaGraphicsGLRegisterImage(&resource, quadTexture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard));
-
             createSurfaceObject();
-
             usingGPU = true;
         }
 		else if (!useGPU && usingGPU)
 		{
 			checkCudaErrors(cudaGraphicsUnmapResources(1, &resource, 0));
 			checkCudaErrors(cudaGraphicsUnregisterResource(resource));
-
 			usingGPU = false;
 		}
 
-
+        // GUI
         displayWindowGUI(io);
         camera->updateGUI(io);  
         scene->updateGUI(io);
 
-
+        // Object updates
         camera->update(io);
         scene->update(io);
         
+        // Raytrace
         if (usingGPU)
         {
             rtGPU->raytrace(scene, camera, bitmap_surface);
@@ -300,14 +294,12 @@ void Window::renderLoop()
         }
             
         
-        //----------------------------
-
+        // Render texture to screen
         glBindVertexArray(quadVAO);
         glBindTexture(GL_TEXTURE_2D, quadTexture);
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
         
-        // Rendering
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
@@ -344,7 +336,7 @@ void Window::displayWindowGUI(ImGuiIO& io)
 
     if (show_demo_window) ImGui::ShowDemoWindow(&show_demo_window);
 
-    ImGui::Begin("Inspector");                          // Create a window called "Hello, world!" and append into it.
+    ImGui::Begin("Inspector");                          
 
     ImGui::Checkbox("Use GPU", &useGPU);      
     ImGui::Checkbox("Demo Window", &show_demo_window);      

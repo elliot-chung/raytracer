@@ -16,15 +16,74 @@ void surf2Dwrite(T data, cudaSurfaceObject_t surfObj, int x, int y,
 
 struct mat4
 {
-	float4 r0;
-	float4 r1;
-	float4 r2;
-	float4 r3;
+	float4 c0;
+	float4 c1;
+	float4 c2;
+	float4 c3;
+};
+
+struct mat3
+{
+	float3 c0;
+	float3 c1;
+	float3 c2;
+};
+
+struct GPURayHit
+{
+	bool didHit;
+
+	float distance;
+	float3 barycentricCoords;
+
+	float4 hitPosition;
+	float2 uv;
+	mat3 tbnMatrix;
+};
+
+struct GPUMaterialData
+{
+	// Material* material;
+
+	float3 normal;
+	float3 albedo;
+	float3 roughness;
+	float3 metal;
+	float3 ao;
+	float3 emission;
+};
+
+struct GPUTriangleHit
+{
+	float distance;
+	float3 barycentricCoords;
+};
+
+
+struct GPURay
+{
+	float4	origin;
+	float4	direction;
+	int		bounceCount;
+	float	maxDistance;
+};
+
+struct ObjectData
+{
+	mat4 modelMatrix;
+	GPUMeshData* mesh;
+	// GPUMaterialData* material;
+};
+
+struct ObjectDataVector
+{
+	ObjectData* data;
+	int size;
 };
 
 struct CameraParams
 {
-	float3	origin;
+	float4	origin;
 	float4	rotation;
 	float   exposure;
 	int		width;
@@ -44,6 +103,12 @@ struct CameraParams
 	a.z = b.z; \
 	a.w = b.w;
 
+#define mat4transfer(a, b) \
+	vec4transfer(a.c0, b[0]); \
+	vec4transfer(a.c1, b[1]); \
+	vec4transfer(a.c2, b[2]); \
+	vec4transfer(a.c3, b[3]);
+
 class GPURaytracer : public Raytracer
 {
 public:
@@ -53,9 +118,27 @@ private:
 }; 
 
 // GPU kernel forward declarations
-__global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas);
+__global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, ObjectDataVector objectDataVector, int bounceCount, float maxDistance);
+
+__device__ float4 singleTrace(GPURay& ray, ObjectDataVector objectDataVector);
+
+__device__ GPURay setupRay(const CameraParams& camera, const int x, const int y, const int bounceCount, const float maxDistance);
+
+__device__ bool intersectsBoundingBox(const GPURay& ray, const float3& minBound, const float3& maxBound);
+
+__device__ GPURayHit getIntersectionPoint(const GPURay& ray, const ObjectData& data);
+
+__device__ GPUTriangleHit distToTriangle(const GPURay& ray, const float4& v0, const float4& v1, const float4& v2);
 
 // Credit https://forums.developer.nvidia.com/t/cuda-for-quaternions-hyper-complex-numbers-operations/44116/2
 __device__ __forceinline__ float4 rotate(const float4 v, const float4 q);
+
+__device__ __forceinline__ float4 normalize(const float4 v);
+
+__device__ __forceinline__ float4 matVecMul(const mat4 m, const float4 v);
+
+__device__ __forceinline__ float4 negate(const float4 v);
+
+__device__ __forceinline__ float4 exposureCorrection(const float4 color, const float exposure);
 
 

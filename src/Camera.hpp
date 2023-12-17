@@ -8,11 +8,15 @@
 #include <glm/gtc/quaternion.hpp>
 
 #include "cuda_runtime.h"
+#include "helper_cuda.h"
+
+#include "global.hpp"
+
 
 class Camera
 {
 public:
-    Camera(glm::vec3& position, glm::quat& rotation, float fov, float exposure, bool* cuda) : Position(position), Rotation(rotation), verticalFOV(fov), exposureValue(exposure), useGPU(cuda) { }
+    Camera(glm::vec3& position, glm::quat& rotation, float fov, float exposure) : Position(position), Rotation(rotation), verticalFOV(fov), exposureValue(exposure) { }
 
     
     virtual void update(ImGuiIO& io) 
@@ -67,15 +71,15 @@ public:
         }
 
         // If CUDA is enabled, send rays to GPU
-        if (*useGPU) {
-            if (cudaPreTransformRays) cudaDestroyTextureObject(cudaPreTransformRays);
+        if (usingGPU) {
+            if (cudaPreTransformRays) checkCudaErrors(cudaDestroyTextureObject(cudaPreTransformRays));
 
             cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc(32, 32, 32, 32, cudaChannelFormatKindFloat);
             cudaArray_t cuArray;
-            cudaMallocArray(&cuArray, &channelDesc, width, height);
+            checkCudaErrors(cudaMallocArray(&cuArray, &channelDesc, width, height));
 
             const size_t spitch = width * sizeof(glm::vec4);
-            cudaMemcpy2DToArray(cuArray, 0, 0, &preTransformRays[0].x, spitch, width * sizeof(glm::vec4), height, cudaMemcpyHostToDevice);
+            checkCudaErrors(cudaMemcpy2DToArray(cuArray, 0, 0, &preTransformRays[0].x, spitch, width * sizeof(glm::vec4), height, cudaMemcpyHostToDevice));
             
 
             // Specify texture
@@ -94,7 +98,7 @@ public:
             texDesc.normalizedCoords = 0; 
 
             // Create texture object
-            cudaCreateTextureObject(&cudaPreTransformRays, &resDesc, &texDesc, NULL);
+            checkCudaErrors(cudaCreateTextureObject(&cudaPreTransformRays, &resDesc, &texDesc, NULL));
             
         }
     }
@@ -126,6 +130,4 @@ private:
 
     float verticalFOV;
     float exposureValue;
-
-    bool* useGPU = 0;
 };

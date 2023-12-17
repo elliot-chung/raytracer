@@ -8,7 +8,10 @@
 #include "ImGui/imgui.h"
 #include "ImGui/imgui_impl_glfw.h"
 #include "ImGui/imgui_impl_opengl3.h"
+
+#ifndef __CUDACC__
 #include "glm/gtx/string_cast.hpp"
+#endif
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h> 
@@ -24,7 +27,7 @@
 #include "processor/CPU/CPURaytracer.hpp"
 #include "processor/GPU/GPURaytracer.hpp"
 
-
+#include "global.hpp"
 
 
 #define CAMERA_START_POS glm::vec3(0.0f, 0.0f, 10.0f)
@@ -95,9 +98,8 @@ private:
          1.0f,  1.0f,  1.0f, 1.0f
     };
 
-    bool availableGPU = false;
+    
     bool useGPU = false;
-    bool usingGPU = false;
 
     void updateTexture();
 
