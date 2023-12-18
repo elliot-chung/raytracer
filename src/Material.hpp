@@ -5,6 +5,10 @@
 #include <unordered_map>
 #include <string>
 
+#include "cuda_runtime.h"
+#include "helper_cuda.h"
+#include "global.hpp"
+
 class Texture;
 typedef std::unordered_map<std::string, std::pair<int, Texture*>> TextureMap; // Format <path-name, <ref-count, texture-pointer>>
 
@@ -40,6 +44,32 @@ private:
 
 
 // -------------------------------------------------------------------------------------------------------- //
+struct GPUMaterial
+{
+	const float3 NORMAL = make_float3(0.0f, 0.0f, 1.0f);
+	const float3 AO = make_float3(1.0f, 1.0f, 1.0f);
+
+	float4 albedo;
+	float3 roughness;
+	float3 metal;
+	float3 emissionColor;
+	float emissionStrength;
+
+	cudaTextureObject_t normalTexture = 0;
+	cudaTextureObject_t albedoTexture = 0;
+	cudaTextureObject_t roughnessTexture = 0;
+	cudaTextureObject_t metalTexture = 0;
+	cudaTextureObject_t ambientOcclusionTexture = 0;
+	cudaTextureObject_t emissionTexture = 0;
+
+	__device__  float3 getNormal(float x, float y);
+	__device__  float4 getAlbedo(float x, float y);
+	__device__  float getRoughness(float x, float y);
+	__device__  float getMetal(float x, float y);
+	__device__  float3 getAmbientOcclusion(float x, float y);
+	__device__  float4 getEmission(float x, float y);
+};
+
 class Material;
 typedef std::unordered_map<std::string, Material*> MaterialMap;
 
@@ -68,7 +98,10 @@ public:
 	bool setAmbientOcclusionTexture(const char* path);
 	bool setEmissionTexture(const char* path);
 
+	void sendToGPU();
+
 	inline static Material* getMaterial(std::string& name) { return materialMap[name]; }
+	inline static GPUMaterial* getGPUMaterial(std::string& name) { return materialMap[name]->gpuMaterial; }
 
 private:
 	const glm::vec3 NORMAL = glm::vec3(0.0f, 0.0f, 1.0f);
@@ -87,6 +120,8 @@ private:
 	Texture* metalTexture = 0;
 	Texture* ambientOcclusionTexture = 0;
 	Texture* emissionTexture = 0;
+
+	GPUMaterial* gpuMaterial = 0;
 
 	float emissionStrength;
 

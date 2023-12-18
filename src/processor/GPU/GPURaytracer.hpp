@@ -34,23 +34,22 @@ struct GPURayHit
 	bool didHit;
 
 	float distance;
-	float3 barycentricCoords;
 
 	float4 hitPosition;
 	float2 uv;
 	mat3 tbnMatrix;
+
+	GPUMaterial* material;
 };
 
-struct GPUMaterialData
+struct GPUMaterialPositionData
 {
-	// Material* material;
-
+	float4 albedo;
 	float3 normal;
-	float3 albedo;
-	float3 roughness;
-	float3 metal;
 	float3 ao;
-	float3 emission;
+	float roughness;
+	float metal;
+	float4 emission;
 };
 
 struct GPUTriangleHit
@@ -72,7 +71,7 @@ struct ObjectData
 {
 	mat4 modelMatrix;
 	GPUMeshData* mesh;
-	// GPUMaterialData* material;
+	GPUMaterial* material;
 };
 
 struct ObjectDataVector
@@ -118,27 +117,41 @@ private:
 }; 
 
 // GPU kernel forward declarations
-__global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, ObjectDataVector objectDataVector, int bounceCount, float maxDistance);
-
-__device__ float4 singleTrace(GPURay& ray, ObjectDataVector objectDataVector);
+__global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, ObjectDataVector objectDataVector, const int bounceCount, const float maxDistance, const float aoIntensity);
 
 __device__ GPURay setupRay(const CameraParams& camera, const int x, const int y, const int bounceCount, const float maxDistance);
 
+__device__ float4 singleTrace(const GPURay& ray, const ObjectDataVector& objectDataVector, const float aoIntensity);
+
 __device__ bool intersectsBoundingBox(const GPURay& ray, const float3& minBound, const float3& maxBound);
+
+__device__ GPUMaterialPositionData getMaterialData(const GPURayHit& hit);
 
 __device__ GPURayHit getIntersectionPoint(const GPURay& ray, const ObjectData& data);
 
 __device__ GPUTriangleHit distToTriangle(const GPURay& ray, const float4& v0, const float4& v1, const float4& v2);
 
-// Credit https://forums.developer.nvidia.com/t/cuda-for-quaternions-hyper-complex-numbers-operations/44116/2
-__device__ __forceinline__ float4 rotate(const float4 v, const float4 q);
+__device__ __forceinline__ float4 exposureCorrection(const float4 color, const float exposure);
+
+// GPU math functions
 
 __device__ __forceinline__ float4 normalize(const float4 v);
 
+__device__ __forceinline__ float3 matVecMul(const mat3 m, const float3 v);
+
 __device__ __forceinline__ float4 matVecMul(const mat4 m, const float4 v);
+
+__device__ __forceinline__ float4 cross(const float4 a, const float4 b);
 
 __device__ __forceinline__ float4 negate(const float4 v);
 
-__device__ __forceinline__ float4 exposureCorrection(const float4 color, const float exposure);
+__device__ __forceinline__ float4 normalize(const float4 v);
+
+__device__ __forceinline__ float3 normalize(const float3 v);
+
+// Credit https://forums.developer.nvidia.com/t/cuda-for-quaternions-hyper-complex-numbers-operations/44116/2
+__device__ __forceinline__ float4 rotate(const float4 v, const float4 q); 
+
+
 
 

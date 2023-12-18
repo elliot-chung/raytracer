@@ -47,7 +47,7 @@ Color CPURaytracer::singleTrace(Ray& ray, const Scene::ObjectMap& objects)
 		getIntersectionPoint(ray, object);
 	}
 
-	Color outgoingLight(0.00, 0.00, 0.00);       // Slight skylight
+	Color outgoingLight(0.00, 0.00, 0.00);       // skylight color
 
 	if (!ray.didHit)  return outgoingLight;	
 
@@ -59,10 +59,7 @@ Color CPURaytracer::singleTrace(Ray& ray, const Scene::ObjectMap& objects)
 	outgoingLight += ray.hitInfo.albedo * ray.hitInfo.ao * aoVec; // Ambient occlusion
 	outgoingLight += ray.hitInfo.emission; // Emission
 
-	if (ray.bounceCount == 0)
-	{
-		return outgoingLight;
-	}
+	if (ray.bounceCount == 0) return outgoingLight;
 	
 
 	// Create bounce ray according to material data

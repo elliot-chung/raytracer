@@ -4,7 +4,7 @@
 // Main code
 int main(int argc, char** argv)
 { 
-    Window window(401, 303, "Raytracer");
+    Window window(800, 600, "Raytracer");
     
     window.renderLoop();
 

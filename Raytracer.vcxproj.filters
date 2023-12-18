@@ -33,9 +33,6 @@
     <ClCompile Include="src\processor\CPU\CPURaytracer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Material.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\ImGui\imgui.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -1279,5 +1276,6 @@
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="src\processor\GPU\GPURaytracer.cu" />
+    <CudaCompile Include="src\Material.cu" />
   </ItemGroup>
 </Project>

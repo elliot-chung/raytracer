@@ -26,8 +26,10 @@ void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera
 	{
 		DisplayObject* obj = objPair.second;
 		ObjectData data = {};
+
 		mat4transfer(data.modelMatrix, obj->getModelMatrix());
 		data.mesh = obj->getMesh()->getGPUMeshData();
+		data.material = Material::getGPUMaterial(obj->getMaterialName());
 		objectDataArray[i++] = data;
 	}
 	ObjectData* objectDataArrayDev;
@@ -38,23 +40,19 @@ void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera
 	objectDataVector.data = objectDataArrayDev;
 	objectDataVector.size = objects.size();
 
-	// Send Rays to GPU
-
 	// Launch Kernel
 	dim3 blockSize(16, 16);
 	dim3 gridSize((width + blockSize.x - 1) / blockSize.x, (height + blockSize.y - 1) / blockSize.y);
 
-	raytraceKernel<<<gridSize, blockSize>>>(params, canvas, objectDataVector, bounceCount, maxDistance);
+	raytraceKernel<<<gridSize, blockSize>>>(params, canvas, objectDataVector, bounceCount, maxDistance, aoIntensity);
 	checkCudaErrors(cudaPeekAtLastError()); 
 	checkCudaErrors(cudaDeviceSynchronize()); 
-	
-	
 
 	checkCudaErrors(cudaFree(objectDataArrayDev));
 	delete[] objectDataArray;
 }
 
-__global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, ObjectDataVector objectDataVector, int bounceCount, float maxDistance)
+__global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, ObjectDataVector objectDataVector, const int bounceCount, const float maxDistance, const float aoIntensity)
 {
 	unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
 	unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -65,8 +63,8 @@ __global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, 
 
 	GPURay ray = setupRay(camera, x, y, bounceCount, maxDistance);
 
-	float4 color = singleTrace(ray, objectDataVector);
-	// color = exposureCorrection(color, camera.exposure);
+	float4 color = singleTrace(ray, objectDataVector, aoIntensity);
+	color = exposureCorrection(color, camera.exposure);
 
 	surf2Dwrite(color, canvas, x * sizeof(float4), y);
 }
@@ -82,7 +80,7 @@ __device__ GPURay setupRay(const CameraParams& camera, const int x, const int y,
 	return ray;
 }
 
-__device__ float4 singleTrace(GPURay& ray, ObjectDataVector objectDataVector)
+__device__ float4 singleTrace(const GPURay& ray, const ObjectDataVector& objectDataVector, const float aoIntensity)
 {
 	GPURayHit closestHit = {};
 	closestHit.distance = FLT_MAX;
@@ -97,13 +95,60 @@ __device__ float4 singleTrace(GPURay& ray, ObjectDataVector objectDataVector)
 		}
 	}
 
-	if (closestHit.didHit) return make_float4(1.0f, 0.0f, 0.0f, 1.0f);
-	else return make_float4(0.0f, 0.0f, 0.0f, 1.0f);
+	float4 outgoingLight = make_float4(0.0f, 0.0f, 0.0f, 1.0f); // Skylight color
+
+	if (!closestHit.didHit) return outgoingLight;
+
+	GPUMaterialPositionData materialData = getMaterialData(closestHit);
+
+	// Ambient Occlusion
+	outgoingLight.x += materialData.albedo.x * materialData.ao.x * aoIntensity;
+	outgoingLight.y += materialData.albedo.y * materialData.ao.y * aoIntensity;
+	outgoingLight.z += materialData.albedo.z * materialData.ao.z * aoIntensity;
+
+	// Emission
+	outgoingLight.x += materialData.emission.x;
+	outgoingLight.y += materialData.emission.y;
+	outgoingLight.z += materialData.emission.z;
+
+	if (ray.bounceCount == 0) return outgoingLight;
+
+	// Reflection
+	GPURay bounceRay = {};
+	bounceRay.origin = closestHit.hitPosition;
+	// bounceRay.direction = randomUnitVectorInHemsiphere(seed, materialData.normal);
+	bounceRay.bounceCount = ray.bounceCount - 1;
+	bounceRay.maxDistance = ray.maxDistance;
+
+	float4 bounceLight = singleTrace(bounceRay, objectDataVector, aoIntensity);
+
+	outgoingLight.x += materialData.albedo.x * bounceLight.x;
+	outgoingLight.y += materialData.albedo.y * bounceLight.y;
+	outgoingLight.z += materialData.albedo.z * bounceLight.z;
+
+	return outgoingLight;
 }
 
 __device__ bool intersectsBoundingBox(const GPURay& ray, const float3& minBound, const float3& maxBound)
 {
 	return true;
+}
+
+__device__ GPUMaterialPositionData getMaterialData(const GPURayHit& hit)
+{
+	GPUMaterialPositionData output = {};
+	float2 uv = hit.uv;
+	mat3 tbnMatrix = hit.tbnMatrix;
+
+	output.albedo = hit.material->getAlbedo(uv.x, uv.y);
+	output.normal = hit.material->getNormal(uv.x, uv.y);
+	output.normal = normalize(matVecMul(tbnMatrix, output.normal)); 
+	output.roughness = hit.material->getRoughness(uv.x, uv.y);
+	output.metal = hit.material->getMetal(uv.x, uv.y);
+	output.ao = hit.material->getAmbientOcclusion(uv.x, uv.y);
+	output.emission = hit.material->getEmission(uv.x, uv.y);
+	
+	return output;
 }
 
 __device__ GPURayHit getIntersectionPoint(const GPURay& ray, const ObjectData& data)
@@ -144,7 +189,7 @@ __device__ GPURayHit getIntersectionPoint(const GPURay& ray, const ObjectData& d
 	output.didHit = false;
 
 	if (closestTriangle == -1) return output;
-	/*
+	
 	int i0 = indices[closestTriangle * 3 + 0];
 	int i1 = indices[closestTriangle * 3 + 1];
 	int i2 = indices[closestTriangle * 3 + 2];
@@ -184,37 +229,37 @@ __device__ GPURayHit getIntersectionPoint(const GPURay& ray, const ObjectData& d
 		0.0f
 	);
 	tangent = matVecMul(modelMatrix, tangent);
-	bitangent = matVecMul(modelMatrix, bitangent);
-	tangent = normalize(tangent);
-	bitangent = normalize(bitangent);
-	float4 normal = negate(cross(tangent, bitangent));
+	bitangent = matVecMul(modelMatrix, bitangent); 
+	tangent = normalize(tangent); 
+	bitangent = normalize(bitangent); 
+	float4 normal = negate(cross(tangent, bitangent)); 
 
-	mat3 tbnMatrix;
-	tbnMatrix.c0 = make_float3(tangent.x, tangent.x, tangent.x); 
-	tbnMatrix.c1 = make_float3(bitangent.y, bitangent.y, bitangent.y); 
-	tbnMatrix.c2 = make_float3(normal.z, normal.z, normal.z); 
+	mat3 tbnMatrix = {};
+	tbnMatrix.c0 = make_float3(tangent.x, tangent.x, tangent.x);  
+	tbnMatrix.c1 = make_float3(bitangent.y, bitangent.y, bitangent.y);  
+	tbnMatrix.c2 = make_float3(normal.z, normal.z, normal.z);  
 
-	float4 interpPosition = make_float4(
-		v0.x * barycentricCoords.x + v1.x * barycentricCoords.y + v2.x * barycentricCoords.z,
-		v0.y * barycentricCoords.x + v1.y * barycentricCoords.y + v2.y * barycentricCoords.z,
-		v0.z * barycentricCoords.x + v1.z * barycentricCoords.y + v2.z * barycentricCoords.z,
+	float4 interpPosition = make_float4( 
+		v0.x * closestHit.barycentricCoords.x + v1.x * closestHit.barycentricCoords.y + v2.x * closestHit.barycentricCoords.z,
+		v0.y * closestHit.barycentricCoords.x + v1.y * closestHit.barycentricCoords.y + v2.y * closestHit.barycentricCoords.z,
+		v0.z * closestHit.barycentricCoords.x + v1.z * closestHit.barycentricCoords.y + v2.z * closestHit.barycentricCoords.z,
 		1.0f
 	);
 	float2 interpUV = make_float2(
-		uv0.x * barycentricCoords.x + uv1.x * barycentricCoords.y + uv2.x * barycentricCoords.z,
-		uv0.y * barycentricCoords.x + uv1.y * barycentricCoords.y + uv2.y * barycentricCoords.z
+		uv0.x * closestHit.barycentricCoords.x + uv1.x * closestHit.barycentricCoords.y + uv2.x * closestHit.barycentricCoords.z,
+		uv0.y * closestHit.barycentricCoords.x + uv1.y * closestHit.barycentricCoords.y + uv2.y * closestHit.barycentricCoords.z
 	);
 
 	interpPosition = matVecMul(modelMatrix, interpPosition);
-
 	
-	ray.hitInfo.hitPosition = interpPosition;
-	ray.hitInfo.uv = interpUV;
-	// ray.hitInfo.material = meshData->material;
-	ray.hitInfo.tbnMatrix = tbnMatrix;
-	*/
+
 
 	output.didHit = true;
+	output.distance = closestHit.distance;
+	output.hitPosition = interpPosition;
+	output.uv = interpUV;
+	output.tbnMatrix = tbnMatrix;
+	output.material = data.material;
 
 	return output;
 }
@@ -272,8 +317,6 @@ __device__ GPUTriangleHit distToTriangle(const GPURay& ray, const float4& v0, co
 		double p1typ0tx = (double)v1t.y * (double)v0t.x;
 		e2 = (float)(p1typ0tx - p1txp0ty);
 	}
-
-	
 
 	if ((e0 < 0 || e1 < 0 || e2 < 0) && (e0 > 0 || e1 > 0 || e2 > 0))
 		return output;
@@ -340,6 +383,15 @@ __device__ __forceinline__ float4 rotate(const float4 v, const float4 q)
 	);
 }
 
+__device__ __forceinline__ float3 matVecMul(const mat3 m, const float3 v)
+{
+	return make_float3(
+		m.c0.x * v.x + m.c1.x * v.y + m.c2.x * v.z, 
+		m.c0.y * v.x + m.c1.y * v.y + m.c2.y * v.z, 
+		m.c0.z * v.x + m.c1.z * v.y + m.c2.z * v.z 
+	);
+}
+
 __device__ __forceinline__ float4 matVecMul(const mat4 m, const float4 v)
 {
 	return make_float4(
@@ -372,6 +424,11 @@ __device__ __forceinline__ float4 normalize(const float4 v)
 	return make_float4(v.x * invLength, v.y * invLength, v.z * invLength, v.w);
 }
 
+__device__ __forceinline__ float3 normalize(const float3 v)
+{
+	float invLength = rsqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
+	return make_float3(v.x * invLength, v.y * invLength, v.z * invLength);
+}
 
 
 
