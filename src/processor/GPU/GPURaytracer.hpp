@@ -45,7 +45,7 @@ struct GPURayHit
 struct GPUMaterialPositionData
 {
 	float4 albedo;
-	float3 normal;
+	float4 normal;
 	float3 ao;
 	float roughness;
 	float metal;
@@ -114,14 +114,15 @@ public:
 	void raytrace(std::shared_ptr<Scene> s, std::shared_ptr<Camera> c, cudaSurfaceObject_t o);
 
 private:
+	unsigned int seedOffset = 0;
 }; 
 
 // GPU kernel forward declarations
-__global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, ObjectDataVector objectDataVector, const int bounceCount, const float maxDistance, const float aoIntensity);
+__global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, ObjectDataVector objectDataVector, const int bounceCount, const float maxDistance, const float aoIntensity, const int seedOffset);
 
 __device__ GPURay setupRay(const CameraParams& camera, const int x, const int y, const int bounceCount, const float maxDistance);
 
-__device__ float4 singleTrace(const GPURay& ray, const ObjectDataVector& objectDataVector, const float aoIntensity);
+__device__ float4 singleTrace(const GPURay& ray, const ObjectDataVector& objectDataVector, const float aoIntensity, unsigned int& seed);
 
 __device__ bool intersectsBoundingBox(const GPURay& ray, const float3& minBound, const float3& maxBound);
 
@@ -151,6 +152,15 @@ __device__ __forceinline__ float3 normalize(const float3 v);
 
 // Credit https://forums.developer.nvidia.com/t/cuda-for-quaternions-hyper-complex-numbers-operations/44116/2
 __device__ __forceinline__ float4 rotate(const float4 v, const float4 q); 
+
+__device__ __forceinline__ float randomValue(unsigned int& seed);
+
+__device__ __forceinline__ float randomValueNormalDistribution(unsigned int& seed);
+
+__device__ __forceinline__ float4 randomUnitVector(unsigned int& seed);
+
+__device__ __forceinline__ float4 randomUnitVectorInHemisphere(unsigned int& seed, const float4& normal);
+
 
 
 

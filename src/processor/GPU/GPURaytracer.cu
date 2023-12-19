@@ -1,6 +1,6 @@
 #include "GPURaytracer.hpp"
 
-void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera> camera, cudaSurfaceObject_t canvas)
+void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera> camera, cudaSurfaceObject_t canvas) 
 {
 	// Camera Parameters
 	CameraParams params = {};
@@ -44,7 +44,8 @@ void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera
 	dim3 blockSize(16, 16);
 	dim3 gridSize((width + blockSize.x - 1) / blockSize.x, (height + blockSize.y - 1) / blockSize.y);
 
-	raytraceKernel<<<gridSize, blockSize>>>(params, canvas, objectDataVector, bounceCount, maxDistance, aoIntensity);
+	raytraceKernel<<<gridSize, blockSize>>>(params, canvas, objectDataVector, bounceCount, maxDistance, aoIntensity, seedOffset);
+	seedOffset = (seedOffset + 1) % 100;
 	checkCudaErrors(cudaPeekAtLastError()); 
 	checkCudaErrors(cudaDeviceSynchronize()); 
 
@@ -52,7 +53,7 @@ void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera
 	delete[] objectDataArray;
 }
 
-__global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, ObjectDataVector objectDataVector, const int bounceCount, const float maxDistance, const float aoIntensity)
+__global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, ObjectDataVector objectDataVector, const int bounceCount, const float maxDistance, const float aoIntensity, const int seedOffset)
 {
 	unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
 	unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -62,8 +63,9 @@ __global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, 
 
 
 	GPURay ray = setupRay(camera, x, y, bounceCount, maxDistance);
+	unsigned int seed = x * 10000 + y * 1000 + bounceCount * 10 + seedOffset;
 
-	float4 color = singleTrace(ray, objectDataVector, aoIntensity);
+	float4 color = singleTrace(ray, objectDataVector, aoIntensity, seed);
 	color = exposureCorrection(color, camera.exposure);
 
 	surf2Dwrite(color, canvas, x * sizeof(float4), y);
@@ -80,7 +82,7 @@ __device__ GPURay setupRay(const CameraParams& camera, const int x, const int y,
 	return ray;
 }
 
-__device__ float4 singleTrace(const GPURay& ray, const ObjectDataVector& objectDataVector, const float aoIntensity)
+__device__ float4 singleTrace(const GPURay& ray, const ObjectDataVector& objectDataVector, const float aoIntensity, unsigned int& seed)
 {
 	GPURayHit closestHit = {};
 	closestHit.distance = FLT_MAX;
@@ -116,11 +118,11 @@ __device__ float4 singleTrace(const GPURay& ray, const ObjectDataVector& objectD
 	// Reflection
 	GPURay bounceRay = {};
 	bounceRay.origin = closestHit.hitPosition;
-	// bounceRay.direction = randomUnitVectorInHemsiphere(seed, materialData.normal);
+	bounceRay.direction = randomUnitVectorInHemisphere(seed, materialData.normal);
 	bounceRay.bounceCount = ray.bounceCount - 1;
 	bounceRay.maxDistance = ray.maxDistance;
 
-	float4 bounceLight = singleTrace(bounceRay, objectDataVector, aoIntensity);
+	float4 bounceLight = singleTrace(bounceRay, objectDataVector, aoIntensity, seed);
 
 	outgoingLight.x += materialData.albedo.x * bounceLight.x;
 	outgoingLight.y += materialData.albedo.y * bounceLight.y;
@@ -141,8 +143,8 @@ __device__ GPUMaterialPositionData getMaterialData(const GPURayHit& hit)
 	mat3 tbnMatrix = hit.tbnMatrix;
 
 	output.albedo = hit.material->getAlbedo(uv.x, uv.y);
-	output.normal = hit.material->getNormal(uv.x, uv.y);
-	output.normal = normalize(matVecMul(tbnMatrix, output.normal)); 
+	float3 normal3 = normalize(matVecMul(tbnMatrix, hit.material->getNormal(uv.x, uv.y))); 
+	output.normal = make_float4(normal3.x, normal3.y, normal3.z, 0.0f);
 	output.roughness = hit.material->getRoughness(uv.x, uv.y);
 	output.metal = hit.material->getMetal(uv.x, uv.y);
 	output.ao = hit.material->getAmbientOcclusion(uv.x, uv.y);
@@ -304,20 +306,6 @@ __device__ GPUTriangleHit distToTriangle(const GPURay& ray, const float4& v0, co
 	float e1 = v2t.x * v0t.y - v2t.y * v0t.x; 
 	float e2 = v0t.x * v1t.y - v0t.y * v1t.x; 
 
-	
-	if (e0 == 0.0f || e1 == 0.0f || e2 == 0.0f) // double precision recomputation in the unlikely case any edge coefficient is 0
-	{
-		double p2txp1ty = (double)v2t.x * (double)v1t.y;
-		double p2typ1tx = (double)v2t.y * (double)v1t.x;
-		e0 = (float)(p2typ1tx - p2txp1ty);
-		double p0txp2ty = (double)v0t.x * (double)v2t.y;
-		double p0typ2tx = (double)v0t.y * (double)v2t.x;
-		e1 = (float)(p0typ2tx - p0txp2ty);
-		double p1txp0ty = (double)v1t.x * (double)v0t.y;
-		double p1typ0tx = (double)v1t.y * (double)v0t.x;
-		e2 = (float)(p1typ0tx - p1txp0ty);
-	}
-
 	if ((e0 < 0 || e1 < 0 || e2 < 0) && (e0 > 0 || e1 > 0 || e2 > 0))
 		return output;
 	float det = e0 + e1 + e2;
@@ -412,9 +400,19 @@ __device__ __forceinline__ float4 cross(const float4 a, const float4 b)
 	);
 }
 
+__device__ __forceinline__ float dot(const float4 a, const float4 b)
+{
+	return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
 __device__ __forceinline__ float4 negate(const float4 v)
 {
 	return make_float4(-v.x, -v.y, -v.z, v.w);
+}
+
+__device__ __forceinline__ float3 negate(const float3 v)
+{
+	return make_float3(-v.x, -v.y, -v.z);
 }
 
 
@@ -428,6 +426,39 @@ __device__ __forceinline__ float3 normalize(const float3 v)
 {
 	float invLength = rsqrtf(v.x * v.x + v.y * v.y + v.z * v.z);
 	return make_float3(v.x * invLength, v.y * invLength, v.z * invLength);
+}
+
+__device__ __forceinline__ float randomValue(unsigned int& seed)
+{
+	seed = seed * 747796405 + 2891336453;
+	unsigned int result = ((seed >> ((seed >> 28) + 4)) ^ seed) * 277803737;
+	result = (result >> 22) ^ result;
+	return result / 4294967295.0;
+}
+
+__device__ __forceinline__ float randomValueNormalDistribution(unsigned int& seed)
+{
+	float theta = 2 * 3.1415926 * randomValue(seed);
+	float r = randomValue(seed);
+	float rho = sqrt(-2 * log(r));
+	return rho * cos(theta);
+}
+
+__device__ __forceinline__ float4 randomUnitVector(unsigned int& seed)
+{
+	float x = randomValueNormalDistribution(seed); 
+	float y = randomValueNormalDistribution(seed); 
+	float z = randomValueNormalDistribution(seed); 
+	return normalize(make_float4(x, y, z, 0.0f));
+}
+
+__device__ __forceinline__ float4 randomUnitVectorInHemisphere(unsigned int& seed, const float4& normal)
+{
+	float4 unitVector = randomUnitVector(seed);
+	if (dot(unitVector, normal) > 0.0f)
+		return unitVector;
+	else
+		return negate(unitVector);
 }
 
 
