@@ -63,70 +63,80 @@ __global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, 
 
 
 	GPURay ray = setupRay(camera, x, y, bounceCount, maxDistance);
-	unsigned int seed = x * 10000 + y * 1000 + bounceCount * 10 + seedOffset;
+	unsigned int i = x + y * camera.width;
+	unsigned int seed = (i + seedOffset * 719393) ;
 
 	float4 color = singleTrace(ray, objectDataVector, aoIntensity, seed);
+
+
+
 	color = exposureCorrection(color, camera.exposure);
 
 	surf2Dwrite(color, canvas, x * sizeof(float4), y);
 }
 
-__device__ GPURay setupRay(const CameraParams& camera, const int x, const int y, const int bounceCount, const float maxDistance)
+__device__ GPURay setupRay(const CameraParams& camera, const int x, const int y, const int bounceCount, const float maxDistance) 
 {
 	GPURay ray = {};
 	ray.origin = camera.origin;
 	ray.direction = tex2D<float4>(camera.rays, x, y);
 	ray.direction = rotate(ray.direction, camera.rotation);
+	ray.direction = normalize(ray.direction);
+	ray.invDirection = make_float4(1.0f / ray.direction.x, 1.0f / ray.direction.y, 1.0f / ray.direction.z, 0.0f);
 	ray.bounceCount = bounceCount;
 	ray.maxDistance = maxDistance;
 	return ray;
 }
 
-__device__ float4 singleTrace(const GPURay& ray, const ObjectDataVector& objectDataVector, const float aoIntensity, unsigned int& seed)
+__device__ float4 singleTrace(GPURay& ray, const ObjectDataVector& objectDataVector, const float aoIntensity, unsigned int& seed)
 {
-	GPURayHit closestHit = {};
-	closestHit.distance = FLT_MAX;
-	for (int i = 0; i < objectDataVector.size; i++)
+	float4 outgoingLight = make_float4(0.0f, 0.0f, 0.0f, 1.0f); // Skylight color 
+	float4 hitAlbedo;
 	{
-		ObjectData data = objectDataVector.data[i];
-		if (!intersectsBoundingBox(ray, data.mesh->minBounds, data.mesh->maxBounds)) continue;
-		GPURayHit hp = getIntersectionPoint(ray, data);
-		if (hp.didHit && hp.distance < closestHit.distance)
+		GPUMaterialPositionData materialData;
+		GPURayHit closestHit = {};
+		closestHit.distance = FLT_MAX;
+		for (int i = 0; i < objectDataVector.size; i++)
 		{
-			closestHit = hp;
+			ObjectData data = objectDataVector.data[i];
+			if (!intersectsBoundingBox(ray, data.mesh->minBounds, data.mesh->maxBounds)) continue;
+			GPURayHit hp = getIntersectionPoint(ray, data);
+			if (hp.didHit && hp.distance < closestHit.distance)
+			{
+				closestHit = hp;
+			}
 		}
-	}
 
-	float4 outgoingLight = make_float4(0.0f, 0.0f, 0.0f, 1.0f); // Skylight color
+		if (!closestHit.didHit) return outgoingLight;
 
-	if (!closestHit.didHit) return outgoingLight;
+		materialData = getMaterialData(closestHit);
+		hitAlbedo = materialData.albedo;
 
-	GPUMaterialPositionData materialData = getMaterialData(closestHit);
+		// Ambient Occlusion
+		outgoingLight.x += materialData.albedo.x * materialData.ao.x * aoIntensity;
+		outgoingLight.y += materialData.albedo.y * materialData.ao.y * aoIntensity;
+		outgoingLight.z += materialData.albedo.z * materialData.ao.z * aoIntensity;
 
-	// Ambient Occlusion
-	outgoingLight.x += materialData.albedo.x * materialData.ao.x * aoIntensity;
-	outgoingLight.y += materialData.albedo.y * materialData.ao.y * aoIntensity;
-	outgoingLight.z += materialData.albedo.z * materialData.ao.z * aoIntensity;
+		// Emission
+		outgoingLight.x += materialData.emission.x;
+		outgoingLight.y += materialData.emission.y;
+		outgoingLight.z += materialData.emission.z;
 
-	// Emission
-	outgoingLight.x += materialData.emission.x;
-	outgoingLight.y += materialData.emission.y;
-	outgoingLight.z += materialData.emission.z;
+		if (ray.bounceCount == 0) return outgoingLight;
 
-	if (ray.bounceCount == 0) return outgoingLight;
+		// Reflection
+		ray.origin = closestHit.hitPosition;
+		ray.direction = randomUnitVectorInHemisphere(seed, materialData.normal);
+		ray.invDirection = make_float4(1.0f / ray.direction.x, 1.0f / ray.direction.y, 1.0f / ray.direction.z, 0.0f);
+		ray.bounceCount = ray.bounceCount - 1;
+		ray.maxDistance = ray.maxDistance;
+	} // Scoping makes sure materialData and closestHit are destroyed before recursion
 
-	// Reflection
-	GPURay bounceRay = {};
-	bounceRay.origin = closestHit.hitPosition;
-	bounceRay.direction = randomUnitVectorInHemisphere(seed, materialData.normal);
-	bounceRay.bounceCount = ray.bounceCount - 1;
-	bounceRay.maxDistance = ray.maxDistance;
+	float4 incomingLight = singleTrace(ray, objectDataVector, aoIntensity, seed);
 
-	float4 bounceLight = singleTrace(bounceRay, objectDataVector, aoIntensity, seed);
-
-	outgoingLight.x += materialData.albedo.x * bounceLight.x;
-	outgoingLight.y += materialData.albedo.y * bounceLight.y;
-	outgoingLight.z += materialData.albedo.z * bounceLight.z;
+	outgoingLight.x += hitAlbedo.x * incomingLight.x;
+	outgoingLight.y += hitAlbedo.y * incomingLight.y;
+	outgoingLight.z += hitAlbedo.z * incomingLight.z;
 
 	return outgoingLight;
 }
