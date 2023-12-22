@@ -228,7 +228,7 @@ void Window::renderLoop()
     rtCPU->setBounceCount(3);
 
     rtGPU->setMaxDistance(100.0f);
-    rtGPU->setBounceCount(3);
+    rtGPU->setBounceCount(6);
 
     Material mat1("redmat", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), 1.0f);
     Material mat2("bluemat", glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), 1.0f);

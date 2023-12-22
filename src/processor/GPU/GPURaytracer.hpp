@@ -63,7 +63,6 @@ struct GPURay
 {
 	float4	origin;
 	float4	direction;
-	float4	invDirection;
 	int		bounceCount;
 	float	maxDistance;
 };
@@ -123,11 +122,13 @@ __global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, 
 
 __device__ GPURay setupRay(const CameraParams& camera, const int x, const int y, const int bounceCount, const float maxDistance);
 
-__device__ float4 singleTrace(GPURay& ray, const ObjectDataVector& objectDataVector, const float aoIntensity, unsigned int& seed);
+__device__ float4 trace(GPURay& ray, const ObjectDataVector& objectDataVector, const float aoIntensity, unsigned int& seed);
 
-__device__ bool intersectsBoundingBox(const GPURay& ray, const float3& minBound, const float3& maxBound);
+__device__ GPURayHit getIntersectionPoint(const GPURay& ray, const ObjectDataVector& dataVector);
 
 __device__ GPUMaterialPositionData getMaterialData(const GPURayHit& hit);
+
+__device__ bool intersectsBoundingBox(const GPURay& ray, const float3& minBound, const float3& maxBound);
 
 __device__ GPURayHit getIntersectionPoint(const GPURay& ray, const ObjectData& data);
 

@@ -66,9 +66,7 @@ __global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, 
 	unsigned int i = x + y * camera.width;
 	unsigned int seed = (i + seedOffset * 719393) ;
 
-	float4 color = singleTrace(ray, objectDataVector, aoIntensity, seed);
-
-
+	float4 color = trace(ray, objectDataVector, aoIntensity, seed);
 
 	color = exposureCorrection(color, camera.exposure);
 
@@ -82,63 +80,53 @@ __device__ GPURay setupRay(const CameraParams& camera, const int x, const int y,
 	ray.direction = tex2D<float4>(camera.rays, x, y);
 	ray.direction = rotate(ray.direction, camera.rotation);
 	ray.direction = normalize(ray.direction);
-	ray.invDirection = make_float4(1.0f / ray.direction.x, 1.0f / ray.direction.y, 1.0f / ray.direction.z, 0.0f);
 	ray.bounceCount = bounceCount;
 	ray.maxDistance = maxDistance;
 	return ray;
 }
 
-__device__ float4 singleTrace(GPURay& ray, const ObjectDataVector& objectDataVector, const float aoIntensity, unsigned int& seed)
+__device__ float4 trace(GPURay& ray, const ObjectDataVector& objectDataVector, const float aoIntensity, unsigned int& seed)
 {
-	float4 outgoingLight = make_float4(0.0f, 0.0f, 0.0f, 1.0f); // Skylight color 
-	float4 hitAlbedo;
+	float4 incomingLight = make_float4(0.0f, 0.0f, 0.0f, 1.0f);
+	float4 rayColor = make_float4(1.0f, 1.0f, 1.0f, 1.0f);
+	
+	for (int i = 0; i < ray.bounceCount; i++)
 	{
-		GPUMaterialPositionData materialData;
-		GPURayHit closestHit = {};
-		closestHit.distance = FLT_MAX;
-		for (int i = 0; i < objectDataVector.size; i++)
-		{
-			ObjectData data = objectDataVector.data[i];
-			if (!intersectsBoundingBox(ray, data.mesh->minBounds, data.mesh->maxBounds)) continue;
-			GPURayHit hp = getIntersectionPoint(ray, data);
-			if (hp.didHit && hp.distance < closestHit.distance)
-			{
-				closestHit = hp;
-			}
-		}
+		GPURayHit closestHit = getIntersectionPoint(ray, objectDataVector); 
+		if (!closestHit.didHit) break;
+		GPUMaterialPositionData materialData = getMaterialData(closestHit); 
+		//----------------------------------//
 
-		if (!closestHit.didHit) return outgoingLight;
-
-		materialData = getMaterialData(closestHit);
-		hitAlbedo = materialData.albedo;
-
-		// Ambient Occlusion
-		outgoingLight.x += materialData.albedo.x * materialData.ao.x * aoIntensity;
-		outgoingLight.y += materialData.albedo.y * materialData.ao.y * aoIntensity;
-		outgoingLight.z += materialData.albedo.z * materialData.ao.z * aoIntensity;
-
-		// Emission
-		outgoingLight.x += materialData.emission.x;
-		outgoingLight.y += materialData.emission.y;
-		outgoingLight.z += materialData.emission.z;
-
-		if (ray.bounceCount == 0) return outgoingLight;
-
-		// Reflection
 		ray.origin = closestHit.hitPosition;
 		ray.direction = randomUnitVectorInHemisphere(seed, materialData.normal);
-		ray.invDirection = make_float4(1.0f / ray.direction.x, 1.0f / ray.direction.y, 1.0f / ray.direction.z, 0.0f);
-		ray.bounceCount = ray.bounceCount - 1;
-		ray.maxDistance = ray.maxDistance;
-	} // Scoping makes sure materialData and closestHit are destroyed before recursion
 
-	float4 incomingLight = singleTrace(ray, objectDataVector, aoIntensity, seed);
+		float4 emittedLight = materialData.emission;
+		incomingLight.x += emittedLight.x * emittedLight.w * rayColor.x;
+		incomingLight.y += emittedLight.y * emittedLight.w * rayColor.y; 
+		incomingLight.z += emittedLight.z * emittedLight.w * rayColor.z; 
+		rayColor.x *= materialData.albedo.x;
+		rayColor.y *= materialData.albedo.y;
+		rayColor.z *= materialData.albedo.z;
+	} 
 
-	outgoingLight.x += hitAlbedo.x * incomingLight.x;
-	outgoingLight.y += hitAlbedo.y * incomingLight.y;
-	outgoingLight.z += hitAlbedo.z * incomingLight.z;
+	return incomingLight;
+}
 
-	return outgoingLight;
+__device__ GPURayHit getIntersectionPoint(const GPURay& ray, const ObjectDataVector& dataVector)
+{
+	GPURayHit closestHit = {};
+	closestHit.distance = FLT_MAX;
+	for (int i = 0; i < dataVector.size; i++)
+	{
+		ObjectData data = dataVector.data[i];
+		if (!intersectsBoundingBox(ray, data.mesh->minBounds, data.mesh->maxBounds)) continue;
+		GPURayHit hp = getIntersectionPoint(ray, data);
+		if (hp.didHit && hp.distance < closestHit.distance)
+		{
+			closestHit = hp;
+		}
+	}
+	return closestHit;
 }
 
 __device__ bool intersectsBoundingBox(const GPURay& ray, const float3& minBound, const float3& maxBound)
@@ -301,7 +289,7 @@ __device__ GPUTriangleHit distToTriangle(const GPURay& ray, const float4& v0, co
 	v2t = make_float3(((float*)&v2t)[kx], ((float*)&v2t)[ky], ((float*)&v2t)[kz]); 
 	
 
-	float sz = 1.f / d.z;
+	float sz = 1.f / d.z; 
 	float sx = -d.x * sz;
 	float sy = -d.y * sz;
 
