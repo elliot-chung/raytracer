@@ -73,7 +73,7 @@ __global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, 
 	surf2Dwrite(color, canvas, x * sizeof(float4), y);
 }
 
-__device__ GPURay setupRay(const CameraParams& camera, const int x, const int y, const int bounceCount, const float maxDistance) 
+__device__ GPURay setupRay(const CameraParams& camera, const int x, const int y, const int bounceCount, const float maxDistance)
 {
 	GPURay ray = {};
 	ray.origin = camera.origin;
@@ -87,7 +87,7 @@ __device__ GPURay setupRay(const CameraParams& camera, const int x, const int y,
 
 __device__ float4 trace(GPURay& ray, const ObjectDataVector& objectDataVector, const float aoIntensity, unsigned int& seed)
 {
-	float4 incomingLight = make_float4(0.0f, 0.0f, 0.0f, 1.0f);
+	float4 incomingLight = make_float4(0.0f, 0.0f, 0.0f, 1.0f); 
 	float4 rayColor = make_float4(1.0f, 1.0f, 1.0f, 1.0f);
 	
 	for (int i = 0; i < ray.bounceCount; i++)
@@ -95,18 +95,30 @@ __device__ float4 trace(GPURay& ray, const ObjectDataVector& objectDataVector, c
 		GPURayHit closestHit = getIntersectionPoint(ray, objectDataVector); 
 		if (!closestHit.didHit) break;
 		GPUMaterialPositionData materialData = getMaterialData(closestHit); 
-		//----------------------------------//
+		
+		if (i == 0) // Ambient Occlusion
+		{
+			incomingLight.x += materialData.ao.x * materialData.albedo.x * aoIntensity;
+			incomingLight.y += materialData.ao.y * materialData.albedo.y * aoIntensity;
+			incomingLight.z += materialData.ao.z * materialData.albedo.z * aoIntensity;
+		}
 
-		ray.origin = closestHit.hitPosition;
-		ray.direction = randomUnitVectorInHemisphere(seed, materialData.normal);
-
+		// Emission
 		float4 emittedLight = materialData.emission;
 		incomingLight.x += emittedLight.x * emittedLight.w * rayColor.x;
 		incomingLight.y += emittedLight.y * emittedLight.w * rayColor.y; 
 		incomingLight.z += emittedLight.z * emittedLight.w * rayColor.z; 
+
+		// Accumulate Color data
 		rayColor.x *= materialData.albedo.x;
 		rayColor.y *= materialData.albedo.y;
 		rayColor.z *= materialData.albedo.z;
+
+		if (i < ray.bounceCount - 1) // Calculate bounce ray
+		{
+			ray.origin = closestHit.hitPosition; 
+			ray.direction = randomUnitVectorInHemisphere(seed, materialData.normal); 
+		}
 	} 
 
 	return incomingLight;
@@ -134,7 +146,7 @@ __device__ bool intersectsBoundingBox(const GPURay& ray, const float3& minBound,
 	return true;
 }
 
-__device__ GPUMaterialPositionData getMaterialData(const GPURayHit& hit)
+__device__  GPUMaterialPositionData getMaterialData(const GPURayHit& hit)
 {
 	GPUMaterialPositionData output = {};
 	float2 uv = hit.uv;

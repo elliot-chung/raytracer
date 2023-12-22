@@ -107,7 +107,7 @@ Window::Window(int width, int height, const char* name)
         glEnableVertexAttribArray(1);
         glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
 
-        glEnable(GL_FRAMEBUFFER_SRGB); // Gamma Correction
+        glEnable(GL_FRAMEBUFFER_SRGB); // Gamma Correction 
 
         // generate texture  
         glGenTextures(1, &quadTexture);
@@ -228,7 +228,8 @@ void Window::renderLoop()
     rtCPU->setBounceCount(3);
 
     rtGPU->setMaxDistance(100.0f);
-    rtGPU->setBounceCount(6);
+    rtGPU->setBounceCount(2);
+    rtGPU->setAOIntensity(.01f);
 
     Material mat1("redmat", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), 1.0f);
     Material mat2("bluemat", glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), 1.0f);
@@ -332,18 +333,43 @@ Window::~Window()
     glfwTerminate();
 }
 
+inline void flipVertical(unsigned char* image, unsigned int width, unsigned int height, unsigned int channels)
+{
+    unsigned char* temp = new unsigned char[width * channels];
+    for (unsigned int i = 0; i < height / 2; i++)
+    {
+        memcpy(temp, &image[i * width * channels], width * channels);
+        memcpy(&image[i * width * channels], &image[(height - i - 1) * width * channels], width * channels);
+        memcpy(&image[(height - i - 1) * width * channels], temp, width * channels);
+    }
+}
+
 void Window::displayWindowGUI(ImGuiIO& io)
 {
 	static bool show_demo_window = false;    
-    static float f = 0.0f;
-    static int counter = 0;
+    static int counter = 1;
 
     if (show_demo_window) ImGui::ShowDemoWindow(&show_demo_window);
 
     ImGui::Begin("Inspector");                          
 
     ImGui::Checkbox("Use GPU", &useGPU);      
-    ImGui::Checkbox("Demo Window", &show_demo_window);      
+    ImGui::Checkbox("Demo Window", &show_demo_window);   
+
+    if (ImGui::Button("Screenshot"))
+    {
+        unsigned char* pixels = new unsigned char[width * height * 4];
+        glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+
+        flipVertical(pixels, width, height, 4);
+
+        std::string path = "screenshot" + std::to_string(counter++) + ".png"; 
+        unsigned int error = lodepng::encode(path, pixels, width, height); 
+
+        delete[] pixels;
+        if (error) ImGui::Text("Error");
+		else ImGui::Text("Success");
+    }
 
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
     ImGui::End();

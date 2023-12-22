@@ -26,6 +26,7 @@
 #include "helper_cuda.h"
 #include "processor/CPU/CPURaytracer.hpp"
 #include "processor/GPU/GPURaytracer.hpp"
+#include "lodepng.h"
 
 #include "global.hpp"
 
