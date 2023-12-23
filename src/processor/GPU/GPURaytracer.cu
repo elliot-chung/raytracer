@@ -157,7 +157,7 @@ __device__ float4 trace(GPURay& ray, const ObjectDataVector& objectDataVector, c
 		if (i < ray.bounceCount - 1) // Calculate bounce ray
 		{
 			ray.origin = closestHit.hitPosition; 
-			ray.direction = randomUnitVectorInCosineHemisphere(seed, materialData.normal);  
+			ray.direction = randomUnitVectorInHemisphere(seed, materialData.normal);  
 		}
 	} 
 
@@ -465,6 +465,16 @@ __device__ __forceinline__ float3 negate(const float3 v)
 	return make_float3(-v.x, -v.y, -v.z);
 }
 
+__device__ __forceinline__ float4 lerp(const float4 a, const float4 b, const float t)
+{
+	float4 output = make_float4(
+		a.x + (b.x - a.x) * t,
+		a.y + (b.y - a.y) * t,
+		a.z + (b.z - a.z) * t,
+		a.w + (b.w - a.w) * t
+	);
+	return output;
+}
 
 __device__ __forceinline__ float4 normalize(const float4 v)
 {
@@ -516,7 +526,18 @@ __device__ __forceinline__ float4 randomUnitVectorInCosineHemisphere(unsigned in
 {
 	float4 unitVector = randomUnitVector(seed);
 	float4 output = make_float4(unitVector.x + normal.x, unitVector.y + normal.y, unitVector.z + normal.z, 0.0f);
-	return unitVector;
+	return output;
 }
 
+__device__ __forceinline__ float4 reflect(const float4& v, const float4& normal)
+{
+	float dotProduct = dot(v, normal);
+	float4 output = make_float4(
+		v.x - 2.0f * dotProduct * normal.x,
+		v.y - 2.0f * dotProduct * normal.y,
+		v.z - 2.0f * dotProduct * normal.z,
+		0.0f
+	);
+	return output;
+}
 

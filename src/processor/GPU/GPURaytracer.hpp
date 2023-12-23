@@ -152,6 +152,8 @@ __device__ __forceinline__ float4 cross(const float4 a, const float4 b);
 
 __device__ __forceinline__ float4 negate(const float4 v);
 
+__device__ __forceinline__ float4 lerp(const float4 a, const float4 b, const float t);
+
 __device__ __forceinline__ float4 normalize(const float4 v);
 
 __device__ __forceinline__ float3 normalize(const float3 v);
@@ -168,6 +170,8 @@ __device__ __forceinline__ float4 randomUnitVector(unsigned int& seed);
 __device__ __forceinline__ float4 randomUnitVectorInHemisphere(unsigned int& seed, const float4& normal);
 
 __device__ __forceinline__ float4 randomUnitVectorInCosineHemisphere(unsigned int& seed, const float4& normal);
+
+__device__ __forceinline__ float4 reflect(const float4& v, const float4& normal);
 
 
 

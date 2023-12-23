@@ -226,10 +226,12 @@ void Window::renderLoop()
     Material mat1("redmat", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), 1.0f);
     Material mat2("bluemat", glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), 1.0f);
     Material mat3("lightmat", glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0.0f, glm::vec3(1.0f, 1.0f, 1.0f), 10.0f);
+    Material mat4("mirrormat", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), 0.0f, 0.0f);
 
     mat1.sendToGPU();
     mat2.sendToGPU();
     mat3.sendToGPU();
+    mat4.sendToGPU();
 
     Cube cube(glm::vec3(0.0f, -1.0f, 0.0f), glm::quat(), glm::vec3(100.0f, 1.0f, 100.0f));
     scene->addToScene("cube", &cube);
@@ -242,6 +244,11 @@ void Window::renderLoop()
     Cube cube3(glm::vec3(0.0f, 2.0f, 0.0f));
     scene->addToScene("cube3", &cube3);
     cube3.setMaterialName("lightmat");
+
+    Cube cube4(glm::vec3(0.0f, 2.0f, -1.05f), glm::quat(), glm::vec3(3.0f, 4.0f, 0.25f));
+    scene->addToScene("cube4", &cube4);
+	cube4.setMaterialName("mirrormat");
+
 
     
     ImGuiIO& io = ImGui::GetIO();
