@@ -67,10 +67,10 @@ __global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, 
 	if (x >= camera.width || y >= camera.height)
 		return;
 
-
-	GPURay ray = setupRay(camera, x, y, bounceCount, maxDistance);
 	unsigned int i = x + y * camera.width;
 	unsigned int seed = (i + frameCount * 719393 + threadIdx.z * 3203974738) ;
+
+	GPURay ray = setupRay(camera, x, y, bounceCount, maxDistance, seed); 
 
 	float4 color = trace(ray, objectDataVector, aoIntensity, seed);
 
@@ -102,7 +102,7 @@ __global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, 
 	surf2Dwrite(color, canvas, x * sizeof(float4), y);
 }
 
-__device__ GPURay setupRay(const CameraParams& camera, const int x, const int y, const int bounceCount, const float maxDistance)
+__device__ GPURay setupRay(const CameraParams& camera, const int x, const int y, const int bounceCount, const float maxDistance, unsigned int& seed)
 {
 	GPURay ray = {};
 	ray.origin = camera.origin; 
@@ -110,8 +110,8 @@ __device__ GPURay setupRay(const CameraParams& camera, const int x, const int y,
 	ray.maxDistance = maxDistance; 
 	if (blockDim.z == MAXIMUM_AA) 	
 	{
-		float xf = (float)x + 0.35f * (int)(0 < (threadIdx.z - 1));
-		float yf = (float)y + 0.35f * (int)(1 < (threadIdx.z - 1));
+		float xf = (float)x + randomValue(seed) - 0.5f; 
+		float yf = (float)y + randomValue(seed) - 0.5f;
 		
 		ray.direction = tex2D<float4>(camera.rays, xf, yf); 
 	}
