@@ -341,6 +341,7 @@ void Window::displayWindowGUI(ImGuiIO& io)
 	static bool show_demo_window = false;    
     static int counter = 1;
     static bool progressiveRendering = rtCPU->getProgressiveRendering();
+    static bool antiAliasing = (bool) rtCPU->getAntiAliasing();
     
     static int bounceCount = rtCPU->getBounceCount();
     static float maxDistance = rtCPU->getMaxDistance();
@@ -348,41 +349,47 @@ void Window::displayWindowGUI(ImGuiIO& io)
 
     if (show_demo_window) ImGui::ShowDemoWindow(&show_demo_window);
 
-    ImGui::Begin("Inspector");                          
+    ImGui::Begin("Render Options");                          
 
+    ImGui::Text("GPU: %s", availableGPU ? "Available" : "Not Available");
     ImGui::Checkbox("Use GPU", &useGPU);      
-    ImGui::Checkbox("Demo Window", &show_demo_window);   
-    ImGui::Checkbox("Progressive Rendering", &progressiveRendering);
+    ImGui::SameLine();  ImGui::Checkbox("Demo Window", &show_demo_window);    
+    ImGui::SameLine();  ImGui::Checkbox("Progressive Rendering", &progressiveRendering);
+    ImGui::SameLine();  ImGui::Checkbox("Anti-Aliasing", &antiAliasing);
 
-    if (ImGui::Button("Screenshot"))
+    ImGui::InputInt("Bounce Count", &bounceCount, 1, 2);
+    ImGui::InputFloat("Max Distance", &maxDistance, 1.0f, 10.0f);
+    ImGui::InputFloat("AO Intensity", &aoIntensity, 0.005f, 0.05f);
+
+	{
+        Raytracer::AntiAliasing aa = antiAliasing ? Raytracer::AntiAliasing::AA4x : Raytracer::AntiAliasing::AA1x;
+        rtGPU->setBounceCount(bounceCount);
+        rtGPU->setMaxDistance(maxDistance);
+        rtGPU->setAOIntensity(aoIntensity);
+        rtGPU->setProgressiveRendering(progressiveRendering);
+        rtGPU->setAntiAliasing(aa);
+
+		rtCPU->setBounceCount(bounceCount);
+		rtCPU->setMaxDistance(maxDistance);
+		rtCPU->setAOIntensity(aoIntensity);
+        rtCPU->setProgressiveRendering(progressiveRendering);
+        rtCPU->setAntiAliasing(aa);
+	}
+    
+    
+
+    if (ImGui::Button("Take Screenshot"))
     {
         unsigned char* pixels = new unsigned char[width * height * 4];
         glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 
         flipVertical(pixels, width, height, 4);
 
-        std::string path = "screenshot" + std::to_string(counter++) + ".png"; 
-        unsigned int error = lodepng::encode(path, pixels, width, height); 
+        std::string path = "screenshot" + std::to_string(counter++) + ".png";
+        unsigned int error = lodepng::encode(path, pixels, width, height);
 
         delete[] pixels;
     }
-
-    ImGui::InputInt("Bounce Count", &bounceCount, 1, 2);
-    ImGui::InputFloat("Max Distance", &maxDistance, 1.0f, 10.0f);
-	ImGui::InputFloat("AO Intensity", &aoIntensity, 0.005f, 0.05f);
-
-	{
-        rtGPU->setBounceCount(bounceCount);
-        rtGPU->setMaxDistance(maxDistance);
-        rtGPU->setAOIntensity(aoIntensity);
-        rtGPU->setProgressiveRendering(progressiveRendering);
-
-		rtCPU->setBounceCount(bounceCount);
-		rtCPU->setMaxDistance(maxDistance);
-		rtCPU->setAOIntensity(aoIntensity);
-        rtCPU->setProgressiveRendering(progressiveRendering);
-	}
-
 
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
     ImGui::End();

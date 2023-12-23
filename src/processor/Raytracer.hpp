@@ -25,6 +25,16 @@ public:
 	inline float getMaxDistance() { return maxDistance; }
 	inline float getAOIntensity() { return aoIntensity; }
 	inline bool getProgressiveRendering() { return progressiveRendering; }
+	
+
+	enum class AntiAliasing
+	{
+		AA1x,
+		AA4x,
+		AA16x,
+	};
+	inline AntiAliasing getAntiAliasing() { return antiAliasing; }
+	inline void setAntiAliasing(AntiAliasing aa) { antiAliasing = aa; }
 
 protected:
 	int bounceCount = BOUNCE_COUNT;
@@ -33,4 +43,6 @@ protected:
 	float aoIntensity = AO_INTENSITY;
 
 	bool progressiveRendering = false;
+
+	AntiAliasing antiAliasing = AntiAliasing::AA1x;
 };

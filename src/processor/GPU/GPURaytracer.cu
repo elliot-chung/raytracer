@@ -41,7 +41,8 @@ void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera
 	objectDataVector.size = objects.size();
 
 	// Launch Kernel
-	dim3 blockSize(16, 16);
+	int aaSamples = (bool) antiAliasing ? MAXIMUM_AA : 1;
+	dim3 blockSize(BLOCK_SIZE, BLOCK_SIZE, aaSamples);
 	dim3 gridSize((width + blockSize.x - 1) / blockSize.x, (height + blockSize.y - 1) / blockSize.y);
 
 	raytraceKernel<<<gridSize, blockSize>>>(params, canvas, objectDataVector, bounceCount, maxDistance, aoIntensity, frameCount, progressiveFrameCount);
@@ -59,6 +60,7 @@ void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera
 
 __global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, ObjectDataVector objectDataVector, const int bounceCount, const float maxDistance, const float aoIntensity, const int frameCount, const unsigned int progressiveFrameCount)
 {
+	__shared__ float4 sharedMemory[BLOCK_SIZE][BLOCK_SIZE][MAXIMUM_AA];
 	unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
 	unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -68,11 +70,28 @@ __global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, 
 
 	GPURay ray = setupRay(camera, x, y, bounceCount, maxDistance);
 	unsigned int i = x + y * camera.width;
-	unsigned int seed = (i + frameCount * 719393) ;
+	unsigned int seed = (i + frameCount * 719393 + threadIdx.z * 3203974738) ;
 
 	float4 color = trace(ray, objectDataVector, aoIntensity, seed);
 
 	color = exposureCorrection(color, camera.exposure);
+
+	sharedMemory[threadIdx.x][threadIdx.y][threadIdx.z] = color;
+	__syncthreads();
+
+	if (threadIdx.z == 0) {
+		color = make_float4(0.0f, 0.0f, 0.0f, 1.0f);
+		for (int i = 0; i < blockDim.z; i++) {
+			color.x += sharedMemory[threadIdx.x][threadIdx.y][i].x;
+			color.y += sharedMemory[threadIdx.x][threadIdx.y][i].y;
+			color.z += sharedMemory[threadIdx.x][threadIdx.y][i].z;
+		}
+		color.x /= blockDim.z;
+		color.y /= blockDim.z;
+		color.z /= blockDim.z;
+	} else {
+		return;
+	}
 
 	if (progressiveFrameCount != 0) {
 		float4 prevColor = surf2Dread<float4>(canvas, x * sizeof(float4), y);
@@ -80,19 +99,29 @@ __global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, 
 		color.y = (color.y + prevColor.y * progressiveFrameCount) / (progressiveFrameCount + 1);
 		color.z = (color.z + prevColor.z * progressiveFrameCount) / (progressiveFrameCount + 1);
 	} 
-	
 	surf2Dwrite(color, canvas, x * sizeof(float4), y);
 }
 
 __device__ GPURay setupRay(const CameraParams& camera, const int x, const int y, const int bounceCount, const float maxDistance)
 {
 	GPURay ray = {};
-	ray.origin = camera.origin;
-	ray.direction = tex2D<float4>(camera.rays, x, y);
-	ray.direction = rotate(ray.direction, camera.rotation);
-	ray.direction = normalize(ray.direction);
-	ray.bounceCount = bounceCount;
-	ray.maxDistance = maxDistance;
+	ray.origin = camera.origin; 
+	ray.bounceCount = bounceCount; 
+	ray.maxDistance = maxDistance; 
+	if (blockDim.z == MAXIMUM_AA) 	
+	{
+		float xf = (float)x + 0.35f * (int)(0 < (threadIdx.z - 1));
+		float yf = (float)y + 0.35f * (int)(1 < (threadIdx.z - 1));
+		
+		ray.direction = tex2D<float4>(camera.rays, xf, yf); 
+	}
+	else
+	{
+		ray.direction = tex2D<float4>(camera.rays, x, y);  
+	}
+	ray.direction = rotate(ray.direction, camera.rotation); 
+	ray.direction = normalize(ray.direction); 
+
 	return ray;
 }
 

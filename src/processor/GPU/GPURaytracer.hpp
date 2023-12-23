@@ -14,6 +14,9 @@ void surf2Dwrite(T data, cudaSurfaceObject_t surfObj, int x, int y,
 	cudaSurfaceBoundaryMode boundaryMode = cudaBoundaryModeTrap);
 #endif
 
+#define BLOCK_SIZE 8
+#define MAXIMUM_AA 4
+
 struct mat4
 {
 	float4 c0;
