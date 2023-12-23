@@ -9,6 +9,9 @@
 #include "../Camera.hpp"
 #include "../Material.hpp"
 
+#define BOUNCE_COUNT 3
+#define MAX_DISTANCE 100.0f
+#define AO_INTENSITY 0.01f
 
 class Raytracer
 {
@@ -16,9 +19,18 @@ public:
 	inline void setBounceCount(int count) { bounceCount = count; }
 	inline void setMaxDistance(float distance) { maxDistance = distance; }
 	inline void setAOIntensity(float intensity) { aoIntensity = intensity; }
-protected:
-	int bounceCount = 0;
-	float maxDistance = 0.0f;
+	inline void setProgressiveRendering(bool progressive) { progressiveRendering = progressive; }
 
-	float aoIntensity = 0.01;
+	inline int getBounceCount() { return bounceCount; }
+	inline float getMaxDistance() { return maxDistance; }
+	inline float getAOIntensity() { return aoIntensity; }
+	inline bool getProgressiveRendering() { return progressiveRendering; }
+
+protected:
+	int bounceCount = BOUNCE_COUNT;
+	float maxDistance = MAX_DISTANCE;
+
+	float aoIntensity = AO_INTENSITY;
+
+	bool progressiveRendering = false;
 };

@@ -44,8 +44,12 @@ void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera
 	dim3 blockSize(16, 16);
 	dim3 gridSize((width + blockSize.x - 1) / blockSize.x, (height + blockSize.y - 1) / blockSize.y);
 
-	raytraceKernel<<<gridSize, blockSize>>>(params, canvas, objectDataVector, bounceCount, maxDistance, aoIntensity, seedOffset);
-	seedOffset = (seedOffset + 1) % 100;
+	raytraceKernel<<<gridSize, blockSize>>>(params, canvas, objectDataVector, bounceCount, maxDistance, aoIntensity, frameCount, progressiveFrameCount);
+	frameCount = frameCount + 1;
+	if (progressiveRendering)
+		progressiveFrameCount++;
+	else 
+		progressiveFrameCount = 0;
 	checkCudaErrors(cudaPeekAtLastError()); 
 	checkCudaErrors(cudaDeviceSynchronize()); 
 
@@ -53,7 +57,7 @@ void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera
 	delete[] objectDataArray;
 }
 
-__global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, ObjectDataVector objectDataVector, const int bounceCount, const float maxDistance, const float aoIntensity, const int seedOffset)
+__global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, ObjectDataVector objectDataVector, const int bounceCount, const float maxDistance, const float aoIntensity, const int frameCount, const unsigned int progressiveFrameCount)
 {
 	unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
 	unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -64,12 +68,19 @@ __global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, 
 
 	GPURay ray = setupRay(camera, x, y, bounceCount, maxDistance);
 	unsigned int i = x + y * camera.width;
-	unsigned int seed = (i + seedOffset * 719393) ;
+	unsigned int seed = (i + frameCount * 719393) ;
 
 	float4 color = trace(ray, objectDataVector, aoIntensity, seed);
 
 	color = exposureCorrection(color, camera.exposure);
 
+	if (progressiveFrameCount != 0) {
+		float4 prevColor = surf2Dread<float4>(canvas, x * sizeof(float4), y);
+		color.x = (color.x + prevColor.x * progressiveFrameCount) / (progressiveFrameCount + 1);
+		color.y = (color.y + prevColor.y * progressiveFrameCount) / (progressiveFrameCount + 1);
+		color.z = (color.z + prevColor.z * progressiveFrameCount) / (progressiveFrameCount + 1);
+	} 
+	
 	surf2Dwrite(color, canvas, x * sizeof(float4), y);
 }
 

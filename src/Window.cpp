@@ -223,14 +223,6 @@ void Window::createSurfaceObject()
 
 void Window::renderLoop()
 {
-    // Setup Scene (this is temporary)
-    rtCPU->setMaxDistance(100.0f);
-    rtCPU->setBounceCount(3);
-
-    rtGPU->setMaxDistance(100.0f);
-    rtGPU->setBounceCount(2);
-    rtGPU->setAOIntensity(.01f);
-
     Material mat1("redmat", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), 1.0f);
     Material mat2("bluemat", glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), 1.0f);
     Material mat3("lightmat", glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0.0f, glm::vec3(1.0f, 1.0f, 1.0f), 10.0f);
@@ -267,7 +259,7 @@ void Window::renderLoop()
         // Toggle cuda surface object
         if (useGPU && !usingGPU)
         {
-            checkCudaErrors(cudaGraphicsGLRegisterImage(&resource, quadTexture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsWriteDiscard));
+            checkCudaErrors(cudaGraphicsGLRegisterImage(&resource, quadTexture, GL_TEXTURE_2D, cudaGraphicsRegisterFlagsNone));
             createSurfaceObject();
             usingGPU = true;
         }
@@ -348,6 +340,11 @@ void Window::displayWindowGUI(ImGuiIO& io)
 {
 	static bool show_demo_window = false;    
     static int counter = 1;
+    static bool progressiveRendering = rtCPU->getProgressiveRendering();
+    
+    static int bounceCount = rtCPU->getBounceCount();
+    static float maxDistance = rtCPU->getMaxDistance();
+    static float aoIntensity = rtCPU->getAOIntensity(); 
 
     if (show_demo_window) ImGui::ShowDemoWindow(&show_demo_window);
 
@@ -355,6 +352,7 @@ void Window::displayWindowGUI(ImGuiIO& io)
 
     ImGui::Checkbox("Use GPU", &useGPU);      
     ImGui::Checkbox("Demo Window", &show_demo_window);   
+    ImGui::Checkbox("Progressive Rendering", &progressiveRendering);
 
     if (ImGui::Button("Screenshot"))
     {
@@ -367,9 +365,24 @@ void Window::displayWindowGUI(ImGuiIO& io)
         unsigned int error = lodepng::encode(path, pixels, width, height); 
 
         delete[] pixels;
-        if (error) ImGui::Text("Error");
-		else ImGui::Text("Success");
     }
+
+    ImGui::InputInt("Bounce Count", &bounceCount, 1, 2);
+    ImGui::InputFloat("Max Distance", &maxDistance, 1.0f, 10.0f);
+	ImGui::InputFloat("AO Intensity", &aoIntensity, 0.005f, 0.05f);
+
+	{
+        rtGPU->setBounceCount(bounceCount);
+        rtGPU->setMaxDistance(maxDistance);
+        rtGPU->setAOIntensity(aoIntensity);
+        rtGPU->setProgressiveRendering(progressiveRendering);
+
+		rtCPU->setBounceCount(bounceCount);
+		rtCPU->setMaxDistance(maxDistance);
+		rtCPU->setAOIntensity(aoIntensity);
+        rtCPU->setProgressiveRendering(progressiveRendering);
+	}
+
 
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
     ImGui::End();

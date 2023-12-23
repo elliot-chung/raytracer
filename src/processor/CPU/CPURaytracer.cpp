@@ -40,42 +40,41 @@ std::vector<float> CPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::sha
 
 Color CPURaytracer::singleTrace(Ray& ray, const Scene::ObjectMap& objects)
 {
-	for (auto objPair : objects)
+	Color incomingLight(0.00, 0.00, 0.00);
+	Color rayColor(1.0f, 1.0f, 1.0f);
+
+	for (int i = 0; i < bounceCount; i++)
 	{
-		DisplayObject* object = objPair.second;
-		if (!intersectsBoundingBox(ray, object->getMinBound(), object->getMaxBound())) continue; // Skip if ray doesn't intersect BB
-		getIntersectionPoint(ray, object);
-	}
-
-	Color outgoingLight(0.00, 0.00, 0.00);       // skylight color
-
-	if (!ray.didHit)  return outgoingLight;	
-
-	// Set material data using closest hit object
-	Material* material = Material::getMaterial(ray.hitInfo.material);
-	setMaterialData(ray, material);
-
-	glm::vec3 aoVec(aoIntensity);
-	outgoingLight += ray.hitInfo.albedo * ray.hitInfo.ao * aoVec; // Ambient occlusion
-	outgoingLight += ray.hitInfo.emission; // Emission
-
-	if (ray.bounceCount == 0) return outgoingLight;
-	
-
-	// Create bounce ray according to material data
-	Ray bounceRay = {};
-	bounceRay.origin = ray.hitInfo.hitPosition;
-	bounceRay.bounceCount = ray.bounceCount - 1;
-	bounceRay.direction = randomUnitVectorInHemisphere(randomSeed, ray.hitInfo.normal);
-	bounceRay.didHit = false;
+		for (auto objPair : objects)
+		{
+			DisplayObject* object = objPair.second;
+			if (!intersectsBoundingBox(ray, object->getMinBound(), object->getMaxBound())) continue; // Skip if ray doesn't intersect BB
+			getIntersectionPoint(ray, object);
+		}
 
 
-	Color incomingLight = singleTrace(bounceRay, objects);
 
-	outgoingLight += incomingLight * ray.hitInfo.albedo;
+		if (!ray.didHit) break;
+
+		// Set material data using closest hit object
+		Material* material = Material::getMaterial(ray.hitInfo.material);
+		setMaterialData(ray, material);
+
+		if (i == 0)
+			incomingLight += material->getAmbientOcclusion(ray.hitInfo.uv.x, ray.hitInfo.uv.y) * glm::vec3(material->getAlbedo(ray.hitInfo.uv.x, ray.hitInfo.uv.y)) * aoIntensity;
 		
-	
-	return outgoingLight;
+		incomingLight += rayColor * material->getEmissionColor(ray.hitInfo.uv.x, ray.hitInfo.uv.y) * material->getEmissionStrength();
+		
+		rayColor *= glm::vec3(material->getAlbedo(ray.hitInfo.uv.x, ray.hitInfo.uv.y));
+
+		if (i < ray.bounceCount - 1)
+		{
+			ray.origin = ray.hitInfo.hitPosition;
+			ray.direction = randomUnitVectorInHemisphere(randomSeed, ray.hitInfo.normal);
+			ray.didHit = false;
+		}
+	}
+	return incomingLight;
 }
 
 // Credit https://tavianator.com/2022/ray_box_boundary.html
