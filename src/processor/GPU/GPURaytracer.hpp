@@ -167,6 +167,8 @@ __device__ __forceinline__ float4 randomUnitVector(unsigned int& seed);
 
 __device__ __forceinline__ float4 randomUnitVectorInHemisphere(unsigned int& seed, const float4& normal);
 
+__device__ __forceinline__ float4 randomUnitVectorInCosineHemisphere(unsigned int& seed, const float4& normal);
+
 
 
 

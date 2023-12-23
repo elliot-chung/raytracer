@@ -157,7 +157,7 @@ __device__ float4 trace(GPURay& ray, const ObjectDataVector& objectDataVector, c
 		if (i < ray.bounceCount - 1) // Calculate bounce ray
 		{
 			ray.origin = closestHit.hitPosition; 
-			ray.direction = randomUnitVectorInHemisphere(seed, materialData.normal); 
+			ray.direction = randomUnitVectorInCosineHemisphere(seed, materialData.normal);  
 		}
 	} 
 
@@ -505,11 +505,18 @@ __device__ __forceinline__ float4 randomUnitVector(unsigned int& seed)
 __device__ __forceinline__ float4 randomUnitVectorInHemisphere(unsigned int& seed, const float4& normal)
 {
 	float4 unitVector = randomUnitVector(seed);
+
 	if (dot(unitVector, normal) > 0.0f)
 		return unitVector;
 	else
 		return negate(unitVector);
 }
 
+__device__ __forceinline__ float4 randomUnitVectorInCosineHemisphere(unsigned int& seed, const float4& normal)
+{
+	float4 unitVector = randomUnitVector(seed);
+	float4 output = make_float4(unitVector.x + normal.x, unitVector.y + normal.y, unitVector.z + normal.z, 0.0f);
+	return unitVector;
+}
 
 
