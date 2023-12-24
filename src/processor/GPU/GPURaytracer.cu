@@ -157,7 +157,8 @@ __device__ float4 trace(GPURay& ray, const ObjectDataVector& objectDataVector, c
 		if (i < ray.bounceCount - 1) // Calculate bounce ray
 		{
 			ray.origin = closestHit.hitPosition; 
-			ray.direction = randomUnitVectorInHemisphere(seed, materialData.normal);  
+			ray.direction = randomUnitVectorInCosineHemisphere(seed, negate(materialData.normal));  
+			// ray.direction = reflect(ray.direction, materialData.normal);
 		}
 	} 
 
@@ -258,6 +259,10 @@ __device__ GPURayHit getIntersectionPoint(const GPURay& ray, const ObjectData& d
 	float4 v1 = make_float4(vertices[i1 + 0], vertices[i1 + 1], vertices[i1 + 2], 1.0f); 
 	float4 v2 = make_float4(vertices[i2 + 0], vertices[i2 + 1], vertices[i2 + 2], 1.0f); 
 
+	v0 = matVecMul(modelMatrix, v0);
+	v1 = matVecMul(modelMatrix, v1);
+	v2 = matVecMul(modelMatrix, v2);
+
 	float2 uv0 = make_float2(uvCoords[i0uv + 0], uvCoords[i0uv + 1]); 
 	float2 uv1 = make_float2(uvCoords[i1uv + 0], uvCoords[i1uv + 1]); 
 	float2 uv2 = make_float2(uvCoords[i2uv + 0], uvCoords[i2uv + 1]); 
@@ -280,16 +285,14 @@ __device__ GPURayHit getIntersectionPoint(const GPURay& ray, const ObjectData& d
 		f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z), 
 		0.0f
 	);
-	tangent = matVecMul(modelMatrix, tangent);
-	bitangent = matVecMul(modelMatrix, bitangent); 
 	tangent = normalize(tangent); 
 	bitangent = normalize(bitangent); 
 	float4 normal = negate(cross(tangent, bitangent)); 
 
 	mat3 tbnMatrix = {};
-	tbnMatrix.c0 = make_float3(tangent.x, tangent.x, tangent.x);  
-	tbnMatrix.c1 = make_float3(bitangent.y, bitangent.y, bitangent.y);  
-	tbnMatrix.c2 = make_float3(normal.z, normal.z, normal.z);  
+	tbnMatrix.c0 = make_float3(tangent.x, tangent.y, tangent.z);  
+	tbnMatrix.c1 = make_float3(bitangent.x, bitangent.y, bitangent.z);  
+	tbnMatrix.c2 = make_float3(normal.x, normal.y, normal.z);  
 
 	float4 interpPosition = make_float4( 
 		v0.x * closestHit.barycentricCoords.x + v1.x * closestHit.barycentricCoords.y + v2.x * closestHit.barycentricCoords.z,
@@ -301,10 +304,6 @@ __device__ GPURayHit getIntersectionPoint(const GPURay& ray, const ObjectData& d
 		uv0.x * closestHit.barycentricCoords.x + uv1.x * closestHit.barycentricCoords.y + uv2.x * closestHit.barycentricCoords.z,
 		uv0.y * closestHit.barycentricCoords.x + uv1.y * closestHit.barycentricCoords.y + uv2.y * closestHit.barycentricCoords.z
 	);
-
-	interpPosition = matVecMul(modelMatrix, interpPosition);
-	
-
 
 	output.didHit = true;
 	output.distance = closestHit.distance;
@@ -526,18 +525,20 @@ __device__ __forceinline__ float4 randomUnitVectorInCosineHemisphere(unsigned in
 {
 	float4 unitVector = randomUnitVector(seed);
 	float4 output = make_float4(unitVector.x + normal.x, unitVector.y + normal.y, unitVector.z + normal.z, 0.0f);
+	output = normalize(output);
 	return output;
 }
 
 __device__ __forceinline__ float4 reflect(const float4& v, const float4& normal)
 {
-	float dotProduct = dot(v, normal);
+	float dotProduct = v.x * normal.x + v.y * normal.y + v.z * normal.z;
 	float4 output = make_float4(
 		v.x - 2.0f * dotProduct * normal.x,
 		v.y - 2.0f * dotProduct * normal.y,
 		v.z - 2.0f * dotProduct * normal.z,
 		0.0f
 	);
+	output = normalize(output);
 	return output;
 }
 

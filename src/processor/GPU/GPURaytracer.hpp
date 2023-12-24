@@ -150,6 +150,8 @@ __device__ __forceinline__ float4 matVecMul(const mat4 m, const float4 v);
 
 __device__ __forceinline__ float4 cross(const float4 a, const float4 b);
 
+__device__ __forceinline__ float dot(const float4 a, const float4 b);
+
 __device__ __forceinline__ float4 negate(const float4 v);
 
 __device__ __forceinline__ float4 lerp(const float4 a, const float4 b, const float t);
