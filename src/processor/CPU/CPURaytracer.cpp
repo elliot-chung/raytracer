@@ -172,7 +172,7 @@ void CPURaytracer::getIntersectionPoint(Ray& ray, DisplayObject* object)
 
 	tangent = glm::normalize(glm::vec3(model * glm::vec4(tangent, 0.0f)));
 	bitangent = glm::normalize(glm::vec3(model * glm::vec4(bitangent, 0.0f)));
-	glm::vec3 normal = -glm::cross(tangent, bitangent);
+	glm::vec3 normal = glm::cross(tangent, bitangent);
 
 	glm::mat3 tbnMatrix = glm::mat3(tangent, bitangent, normal);
 

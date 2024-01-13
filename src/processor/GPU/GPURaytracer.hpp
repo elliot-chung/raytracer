@@ -35,6 +35,7 @@ struct mat3
 struct GPURayHit
 {
 	bool didHit;
+	unsigned int objectDataIndex;
 
 	float distance;
 
@@ -94,6 +95,17 @@ struct CameraParams
 	cudaTextureObject_t rays;
 };
 
+struct DebugInfo
+{
+	int firstObjectDataIndex;
+	float4 firstPosition;
+	float4 firstNormal;
+
+	int secondObjectDataIndex;
+	float4 secondPosition;
+	float4 secondNormal;
+};
+
 #define vec3transfer(a, b) \
 	a.x = b.x; \
 	a.y = b.y; \
@@ -116,17 +128,21 @@ class GPURaytracer : public Raytracer
 public:
 	void raytrace(std::shared_ptr<Scene> s, std::shared_ptr<Camera> c, cudaSurfaceObject_t o);
 
+	inline void setDebug(bool d) { debug = d; }
+
 private:
 	unsigned int frameCount = 0;
 	unsigned int progressiveFrameCount = 0;
+
+	bool debug;
 }; 
 
 // GPU kernel forward declarations
-__global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, ObjectDataVector objectDataVector, const int bounceCount, const float maxDistance, const float aoIntensity, const int frameCount, const unsigned int progressiveFrameCount);
+__global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, ObjectDataVector objectDataVector, const int bounceCount, const float maxDistance, const float aoIntensity, const int frameCount, const unsigned int progressiveFrameCount, const bool debug, DebugInfo* debugInfo);
 
 __device__ GPURay setupRay(const CameraParams& camera, const int x, const int y, const int bounceCount, const float maxDistance, unsigned int& seed);
 
-__device__ float4 trace(GPURay& ray, const ObjectDataVector& objectDataVector, const float aoIntensity, unsigned int& seed);
+__device__ float4 trace(GPURay& ray, const ObjectDataVector& objectDataVector, const float aoIntensity, unsigned int& seed, const bool debug, DebugInfo* debugInfo);
 
 __device__ GPURayHit getIntersectionPoint(const GPURay& ray, const ObjectDataVector& dataVector);
 

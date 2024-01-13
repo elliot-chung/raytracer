@@ -226,7 +226,7 @@ void Window::renderLoop()
     Material mat1("redmat", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), 1.0f);
     Material mat2("bluemat", glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), 1.0f);
     Material mat3("lightmat", glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0.0f, glm::vec3(1.0f, 1.0f, 1.0f), 10.0f);
-    Material mat4("mirrormat", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), 0.0f, 0.0f);
+    Material mat4("mirrormat", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), 0.0f);
 
     mat1.sendToGPU();
     mat2.sendToGPU();
@@ -383,7 +383,7 @@ void Window::displayWindowGUI(ImGuiIO& io)
         rtCPU->setAntiAliasing(aa);
 	}
     
-    
+    rtGPU->setDebug(ImGui::Button("Debug"));
 
     if (ImGui::Button("Take Screenshot"))
     {

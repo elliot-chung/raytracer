@@ -1,6 +1,6 @@
 #include "GPURaytracer.hpp"
 
-void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera> camera, cudaSurfaceObject_t canvas) 
+void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera> camera, cudaSurfaceObject_t canvas)
 {
 	// Camera Parameters
 	CameraParams params = {};
@@ -22,7 +22,7 @@ void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera
 	Scene::ObjectMap objects = scene->getObjects();
 	ObjectData* objectDataArray = new ObjectData[objects.size()];
 	int i = 0;
-	for (auto & objPair : objects)
+	for (auto& objPair : objects)
 	{
 		DisplayObject* obj = objPair.second;
 		ObjectData data = {};
@@ -40,25 +40,52 @@ void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera
 	objectDataVector.data = objectDataArrayDev;
 	objectDataVector.size = objects.size();
 
+	// Create Debug Output
+	DebugInfo* debugInfo = nullptr;
+	if (debug)
+	{
+		checkCudaErrors(cudaMalloc((void**)&debugInfo, sizeof(DebugInfo)));
+		checkCudaErrors(cudaMemset(debugInfo, 0, sizeof(DebugInfo)));
+	}
+
 	// Launch Kernel
 	int aaSamples = (bool) antiAliasing ? MAXIMUM_AA : 1;
 	dim3 blockSize(BLOCK_SIZE, BLOCK_SIZE, aaSamples);
 	dim3 gridSize((width + blockSize.x - 1) / blockSize.x, (height + blockSize.y - 1) / blockSize.y);
 
-	raytraceKernel<<<gridSize, blockSize>>>(params, canvas, objectDataVector, bounceCount, maxDistance, aoIntensity, frameCount, progressiveFrameCount);
+	raytraceKernel<<<gridSize, blockSize>>>(params, canvas, objectDataVector, bounceCount, maxDistance, aoIntensity, frameCount, progressiveFrameCount, debug, debugInfo);
+	checkCudaErrors(cudaPeekAtLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
+
+	// Transfer Debug Output
+	if (debug)
+	{
+		DebugInfo* debugInfoHost = new DebugInfo;
+		checkCudaErrors(cudaMemcpy(debugInfoHost, debugInfo, sizeof(DebugInfo), cudaMemcpyDeviceToHost));
+		std::cout << "First Hit Object:\t" << debugInfoHost->firstObjectDataIndex << '\t';
+		std::cout << "First Hit Position:\t" << debugInfoHost->firstPosition.x << ", " << debugInfoHost->firstPosition.y << ", " << debugInfoHost->firstPosition.z << '\t';
+		std::cout << "First Hit Normal:\t" << debugInfoHost->firstNormal.x << ", " << debugInfoHost->firstNormal.y << ", " << debugInfoHost->firstNormal.z << std::endl;
+		
+		std::cout << "Second Hit Object:\t" << debugInfoHost->secondObjectDataIndex << '\t';
+		std::cout << "Second Hit Position:\t" << debugInfoHost->secondPosition.x << ", " << debugInfoHost->secondPosition.y << ", " << debugInfoHost->secondPosition.z << '\t';
+		std::cout << "Second Hit Normal:\t" << debugInfoHost->secondNormal.x << ", " << debugInfoHost->secondNormal.y << ", " << debugInfoHost->secondNormal.z << '\n' << std::endl;
+	}
+	
 	frameCount = frameCount + 1;
 	if (progressiveRendering)
 		progressiveFrameCount++;
 	else 
 		progressiveFrameCount = 0;
-	checkCudaErrors(cudaPeekAtLastError()); 
-	checkCudaErrors(cudaDeviceSynchronize()); 
+	
 
 	checkCudaErrors(cudaFree(objectDataArrayDev));
+	if (debug) checkCudaErrors(cudaFree(debugInfo));
 	delete[] objectDataArray;
 }
 
-__global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, ObjectDataVector objectDataVector, const int bounceCount, const float maxDistance, const float aoIntensity, const int frameCount, const unsigned int progressiveFrameCount)
+
+
+__global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, ObjectDataVector objectDataVector, const int bounceCount, const float maxDistance, const float aoIntensity, const int frameCount, const unsigned int progressiveFrameCount, const bool debug, DebugInfo* debugInfo)
 {
 	__shared__ float4 sharedMemory[BLOCK_SIZE][BLOCK_SIZE][MAXIMUM_AA];
 	unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -67,12 +94,13 @@ __global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, 
 	if (x >= camera.width || y >= camera.height)
 		return;
 
-	unsigned int i = x + y * camera.width;
-	unsigned int seed = (i + frameCount * 719393 + threadIdx.z * 3203974738) ;
+	bool isCenter = x == camera.width / 2 && y == camera.height / 2;
+
+	unsigned int seed = (x + y * camera.width + threadIdx.z + frameCount * 719393);
 
 	GPURay ray = setupRay(camera, x, y, bounceCount, maxDistance, seed); 
 
-	float4 color = trace(ray, objectDataVector, aoIntensity, seed);
+	float4 color = trace(ray, objectDataVector, aoIntensity, seed, (debug && isCenter), debugInfo);
 
 	color = exposureCorrection(color, camera.exposure);
 
@@ -125,7 +153,7 @@ __device__ GPURay setupRay(const CameraParams& camera, const int x, const int y,
 	return ray;
 }
 
-__device__ float4 trace(GPURay& ray, const ObjectDataVector& objectDataVector, const float aoIntensity, unsigned int& seed)
+__device__ float4 trace(GPURay& ray, const ObjectDataVector& objectDataVector, const float aoIntensity, unsigned int& seed, const bool debug, DebugInfo* debugInfo)
 {
 	float4 incomingLight = make_float4(0.0f, 0.0f, 0.0f, 1.0f); 
 	float4 rayColor = make_float4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -135,9 +163,26 @@ __device__ float4 trace(GPURay& ray, const ObjectDataVector& objectDataVector, c
 		GPURayHit closestHit = getIntersectionPoint(ray, objectDataVector); 
 		if (!closestHit.didHit) break;
 		GPUMaterialPositionData materialData = getMaterialData(closestHit); 
-		
-		if (i == 0) // Ambient Occlusion
+
+		// Debug
+		if (debug)
 		{
+			if (i == 0) 
+			{
+				debugInfo->firstObjectDataIndex = closestHit.objectDataIndex;
+				debugInfo->firstPosition = closestHit.hitPosition;
+				debugInfo->firstNormal = materialData.normal;
+			} else if (i == 1)
+			{
+				debugInfo->secondObjectDataIndex = closestHit.objectDataIndex;
+				debugInfo->secondPosition = closestHit.hitPosition;
+				debugInfo->secondNormal = materialData.normal;
+			}
+		}
+		
+		if (i == 0) // First Hit
+		{
+			// Ambient Occlusion
 			incomingLight.x += materialData.ao.x * materialData.albedo.x * aoIntensity;
 			incomingLight.y += materialData.ao.y * materialData.albedo.y * aoIntensity;
 			incomingLight.z += materialData.ao.z * materialData.albedo.z * aoIntensity;
@@ -151,14 +196,15 @@ __device__ float4 trace(GPURay& ray, const ObjectDataVector& objectDataVector, c
 
 		// Accumulate Color data
 		rayColor.x *= materialData.albedo.x;
-		rayColor.y *= materialData.albedo.y;
+		rayColor.y *= materialData.albedo.y; 
 		rayColor.z *= materialData.albedo.z;
 
 		if (i < ray.bounceCount - 1) // Calculate bounce ray
 		{
-			ray.origin = closestHit.hitPosition; 
-			ray.direction = randomUnitVectorInCosineHemisphere(seed, negate(materialData.normal));  
-			// ray.direction = reflect(ray.direction, materialData.normal);
+			ray.origin = closestHit.hitPosition;
+			float4 diffuseDirection = randomUnitVectorInCosineHemisphere(seed, materialData.normal);  
+			float4 specularDirection = reflect(ray.direction, materialData.normal);
+			ray.direction = normalize(lerp(specularDirection, diffuseDirection, materialData.roughness));  
 		}
 	} 
 
@@ -267,8 +313,8 @@ __device__ GPURayHit getIntersectionPoint(const GPURay& ray, const ObjectData& d
 	float2 uv1 = make_float2(uvCoords[i1uv + 0], uvCoords[i1uv + 1]); 
 	float2 uv2 = make_float2(uvCoords[i2uv + 0], uvCoords[i2uv + 1]); 
 
-	float3 edge1 = make_float3(v1.x - v0.x, v1.y - v0.y, v1.z - v0.z); 
-	float3 edge2 = make_float3(v2.x - v0.x, v2.y - v0.y, v2.z - v0.z); 
+	float4 edge1 = make_float4(v1.x - v0.x, v1.y - v0.y, v1.z - v0.z, 0.0f); 
+	float4 edge2 = make_float4(v2.x - v0.x, v2.y - v0.y, v2.z - v0.z, 0.0f); 
 	float2 deltaUV1 = make_float2(uv1.x - uv0.x, uv1.y - uv0.y); 
 	float2 deltaUV2 = make_float2(uv2.x - uv0.x, uv2.y - uv0.y); 
 
@@ -287,11 +333,11 @@ __device__ GPURayHit getIntersectionPoint(const GPURay& ray, const ObjectData& d
 	);
 	tangent = normalize(tangent); 
 	bitangent = normalize(bitangent); 
-	float4 normal = negate(cross(tangent, bitangent)); 
+	float4 normal = normalize(cross(edge2, edge1));  
 
 	mat3 tbnMatrix = {};
-	tbnMatrix.c0 = make_float3(tangent.x, tangent.y, tangent.z);  
-	tbnMatrix.c1 = make_float3(bitangent.x, bitangent.y, bitangent.z);  
+	tbnMatrix.c0 = make_float3(tangent.x, tangent.y, tangent.z);   
+	tbnMatrix.c1 = make_float3(bitangent.x, bitangent.y, bitangent.z);   
 	tbnMatrix.c2 = make_float3(normal.x, normal.y, normal.z);  
 
 	float4 interpPosition = make_float4( 
@@ -306,6 +352,7 @@ __device__ GPURayHit getIntersectionPoint(const GPURay& ray, const ObjectData& d
 	);
 
 	output.didHit = true;
+	output.objectDataIndex = closestTriangle;
 	output.distance = closestHit.distance;
 	output.hitPosition = interpPosition;
 	output.uv = interpUV;
@@ -372,7 +419,7 @@ __device__ GPUTriangleHit distToTriangle(const GPURay& ray, const float4& v0, co
 		return output;
 
 
-	// Calculate barycentric coords and parametric value (distance)
+	// Calculate barycentric coords and parametric value (distance)   
 	float invDet = 1 / det;
 	float b0 = e0 * invDet;
 	float b1 = e1 * invDet;
@@ -531,7 +578,7 @@ __device__ __forceinline__ float4 randomUnitVectorInCosineHemisphere(unsigned in
 
 __device__ __forceinline__ float4 reflect(const float4& v, const float4& normal)
 {
-	float dotProduct = v.x * normal.x + v.y * normal.y + v.z * normal.z;
+	float dotProduct = dot(v, normal);
 	float4 output = make_float4(
 		v.x - 2.0f * dotProduct * normal.x,
 		v.y - 2.0f * dotProduct * normal.y,
@@ -539,6 +586,7 @@ __device__ __forceinline__ float4 reflect(const float4& v, const float4& normal)
 		0.0f
 	);
 	output = normalize(output);
+    // output = dotProduct > 0.0 ? negate(output) : output;  // I don't know why this is necessary 
 	return output;
 }
 
