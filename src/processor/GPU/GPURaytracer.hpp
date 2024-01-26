@@ -98,12 +98,18 @@ struct CameraParams
 struct DebugInfo
 {
 	int firstObjectDataIndex;
+	float4 firstOrigin;
+	float4 firstDirection;
 	float4 firstPosition;
 	float4 firstNormal;
+	float firstDistance;
 
 	int secondObjectDataIndex;
+	float4 secondOrigin;
+	float4 secondDirection;
 	float4 secondPosition;
 	float4 secondNormal;
+	float secondDistance;
 };
 
 #define vec3transfer(a, b) \

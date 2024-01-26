@@ -45,7 +45,7 @@ void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera
 	if (debug)
 	{
 		checkCudaErrors(cudaMalloc((void**)&debugInfo, sizeof(DebugInfo)));
-		checkCudaErrors(cudaMemset(debugInfo, 0, sizeof(DebugInfo)));
+		checkCudaErrors(cudaMemset(debugInfo, -1, sizeof(DebugInfo)));
 	}
 
 	// Launch Kernel
@@ -63,12 +63,18 @@ void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera
 		DebugInfo* debugInfoHost = new DebugInfo;
 		checkCudaErrors(cudaMemcpy(debugInfoHost, debugInfo, sizeof(DebugInfo), cudaMemcpyDeviceToHost));
 		std::cout << "First Hit Object:\t" << debugInfoHost->firstObjectDataIndex << '\t';
+		std::cout << "First Hit Origin:\t" << debugInfoHost->firstOrigin.x << ", " << debugInfoHost->firstOrigin.y << ", " << debugInfoHost->firstOrigin.z << '\t';
+		std::cout << "First Hit Direction:\t" << debugInfoHost->firstDirection.x << ", " << debugInfoHost->firstDirection.y << ", " << debugInfoHost->firstDirection.z << '\t';
 		std::cout << "First Hit Position:\t" << debugInfoHost->firstPosition.x << ", " << debugInfoHost->firstPosition.y << ", " << debugInfoHost->firstPosition.z << '\t';
-		std::cout << "First Hit Normal:\t" << debugInfoHost->firstNormal.x << ", " << debugInfoHost->firstNormal.y << ", " << debugInfoHost->firstNormal.z << std::endl;
-		
+		std::cout << "First Hit Normal:\t" << debugInfoHost->firstNormal.x << ", " << debugInfoHost->firstNormal.y << ", " << debugInfoHost->firstNormal.z << '\t';
+		std::cout << "First Hit Distance:\t" << debugInfoHost->firstDistance << "\n" << std::endl;
+
 		std::cout << "Second Hit Object:\t" << debugInfoHost->secondObjectDataIndex << '\t';
+		std::cout << "Second Hit Origin:\t" << debugInfoHost->secondOrigin.x << ", " << debugInfoHost->secondOrigin.y << ", " << debugInfoHost->secondOrigin.z << '\t';
+		std::cout << "Second Hit Direction:\t" << debugInfoHost->secondDirection.x << ", " << debugInfoHost->secondDirection.y << ", " << debugInfoHost->secondDirection.z << '\t';
 		std::cout << "Second Hit Position:\t" << debugInfoHost->secondPosition.x << ", " << debugInfoHost->secondPosition.y << ", " << debugInfoHost->secondPosition.z << '\t';
-		std::cout << "Second Hit Normal:\t" << debugInfoHost->secondNormal.x << ", " << debugInfoHost->secondNormal.y << ", " << debugInfoHost->secondNormal.z << '\n' << std::endl;
+		std::cout << "Second Hit Normal:\t" << debugInfoHost->secondNormal.x << ", " << debugInfoHost->secondNormal.y << ", " << debugInfoHost->secondNormal.z << '\t';
+		std::cout << "Second Hit Distance:\t" << debugInfoHost->secondDistance << "\n" << std::endl;
 	}
 	
 	frameCount = frameCount + 1;
@@ -170,13 +176,19 @@ __device__ float4 trace(GPURay& ray, const ObjectDataVector& objectDataVector, c
 			if (i == 0) 
 			{
 				debugInfo->firstObjectDataIndex = closestHit.objectDataIndex;
+				debugInfo->firstOrigin = ray.origin;
+				debugInfo->firstDirection = ray.direction;
 				debugInfo->firstPosition = closestHit.hitPosition;
 				debugInfo->firstNormal = materialData.normal;
+				debugInfo->firstDistance = closestHit.distance;
 			} else if (i == 1)
 			{
 				debugInfo->secondObjectDataIndex = closestHit.objectDataIndex;
+				debugInfo->secondOrigin = ray.origin;
+				debugInfo->secondDirection = ray.direction;
 				debugInfo->secondPosition = closestHit.hitPosition;
 				debugInfo->secondNormal = materialData.normal;
+				debugInfo->secondDistance = closestHit.distance;
 			}
 		}
 		
@@ -223,6 +235,7 @@ __device__ GPURayHit getIntersectionPoint(const GPURay& ray, const ObjectDataVec
 		if (hp.didHit && hp.distance < closestHit.distance)
 		{
 			closestHit = hp;
+			closestHit.objectDataIndex = i;
 		}
 	}
 	return closestHit;
@@ -352,7 +365,6 @@ __device__ GPURayHit getIntersectionPoint(const GPURay& ray, const ObjectData& d
 	);
 
 	output.didHit = true;
-	output.objectDataIndex = closestTriangle;
 	output.distance = closestHit.distance;
 	output.hitPosition = interpPosition;
 	output.uv = interpUV;
@@ -426,7 +438,7 @@ __device__ GPUTriangleHit distToTriangle(const GPURay& ray, const float4& v0, co
 	float b2 = e2 * invDet;
 	float t = tScaled * invDet;
 
-	if (t < 0 || t > ray.maxDistance)
+	if (t < 0.00001 || t > ray.maxDistance)
 		return output;
 
 	
