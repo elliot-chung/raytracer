@@ -62,12 +62,6 @@
     <ClInclude Include="include\glad\glad.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\glfw\glfw3.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\glfw\glfw3native.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\glm\common.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>

@@ -95,6 +95,17 @@ struct CameraParams
 	cudaTextureObject_t rays;
 };
 
+struct RendererParams
+{
+	int bounceCount;
+	float maxDistance;
+	float aoIntensity;
+	unsigned int frameCount;
+	unsigned int progressiveFrameCount;
+	bool antiAliasingEnabled;
+	unsigned int sampleCount;
+};
+
 struct DebugInfo
 {
 	int firstObjectDataIndex;
@@ -137,16 +148,13 @@ public:
 	inline void setDebug(bool d) { debug = d; }
 
 private:
-	unsigned int frameCount = 0;
-	unsigned int progressiveFrameCount = 0;
-
 	bool debug;
 }; 
 
 // GPU kernel forward declarations
-__global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, ObjectDataVector objectDataVector, const int bounceCount, const float maxDistance, const float aoIntensity, const int frameCount, const unsigned int progressiveFrameCount, const bool debug, DebugInfo* debugInfo);
+__global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, ObjectDataVector objectDataVector, const RendererParams renderer, const bool debug, DebugInfo* debugInfo);
 
-__device__ GPURay setupRay(const CameraParams& camera, const int x, const int y, const int bounceCount, const float maxDistance, unsigned int& seed);
+__device__ GPURay setupRay(const CameraParams& camera, const int x, const int y, const int bounceCount, const float maxDistance, const bool aaEnabled, unsigned int& seed);
 
 __device__ float4 trace(GPURay& ray, const ObjectDataVector& objectDataVector, const float aoIntensity, unsigned int& seed, const bool debug, DebugInfo* debugInfo);
 

@@ -151,8 +151,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\glad\glad.h" />
-    <ClInclude Include="include\glfw\glfw3.h" />
-    <ClInclude Include="include\glfw\glfw3native.h" />
     <ClInclude Include="include\glm\common.hpp" />
     <ClInclude Include="include\glm\detail\compute_common.hpp" />
     <ClInclude Include="include\glm\detail\compute_vector_relational.hpp" />

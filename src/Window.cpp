@@ -348,7 +348,7 @@ void Window::displayWindowGUI(ImGuiIO& io)
 	static bool show_demo_window = false;    
     static int counter = 1;
     static bool progressiveRendering = rtCPU->getProgressiveRendering();
-    static bool antiAliasing = (bool) rtCPU->getAntiAliasing();
+    static bool antiAliasing = (bool)rtCPU->getAntiAliasingEnabled();
     
     static int bounceCount = rtCPU->getBounceCount();
     static float maxDistance = rtCPU->getMaxDistance();
@@ -369,18 +369,17 @@ void Window::displayWindowGUI(ImGuiIO& io)
     ImGui::InputFloat("AO Intensity", &aoIntensity, 0.005f, 0.05f);
 
 	{
-        Raytracer::AntiAliasing aa = antiAliasing ? Raytracer::AntiAliasing::AA4x : Raytracer::AntiAliasing::AA1x;
         rtGPU->setBounceCount(bounceCount);
         rtGPU->setMaxDistance(maxDistance);
         rtGPU->setAOIntensity(aoIntensity);
         rtGPU->setProgressiveRendering(progressiveRendering);
-        rtGPU->setAntiAliasing(aa);
+        rtGPU->setAntiAliasingEnabled(antiAliasing);
 
 		rtCPU->setBounceCount(bounceCount);
 		rtCPU->setMaxDistance(maxDistance);
 		rtCPU->setAOIntensity(aoIntensity);
         rtCPU->setProgressiveRendering(progressiveRendering);
-        rtCPU->setAntiAliasing(aa);
+        rtCPU->setAntiAliasingEnabled(antiAliasing);
 	}
     
     rtGPU->setDebug(ImGui::Button("Debug"));

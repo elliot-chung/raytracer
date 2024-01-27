@@ -27,22 +27,20 @@ public:
 	inline bool getProgressiveRendering() { return progressiveRendering; }
 	
 
-	enum class AntiAliasing
-	{
-		AA1x,
-		AA4x,
-		AA16x,
-	};
-	inline AntiAliasing getAntiAliasing() { return antiAliasing; }
-	inline void setAntiAliasing(AntiAliasing aa) { antiAliasing = aa; }
+	inline void setAntiAliasingEnabled(bool enabled) { antiAliasingEnabled = enabled; }
+	inline bool getAntiAliasingEnabled() { return antiAliasingEnabled; }
 
 protected:
 	int bounceCount = BOUNCE_COUNT;
 	float maxDistance = MAX_DISTANCE;
+	unsigned int frameCount = 0;
+	unsigned int progressiveFrameCount = 0;
 
 	float aoIntensity = AO_INTENSITY;
 
 	bool progressiveRendering = false;
 
-	AntiAliasing antiAliasing = AntiAliasing::AA1x;
+	bool antiAliasingEnabled = false;
+
+	unsigned int sampleCount = 1;
 };
