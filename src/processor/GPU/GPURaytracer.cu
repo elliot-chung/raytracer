@@ -60,14 +60,14 @@ void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera
 
 	// Launch Kernel
 	dim3 blockSize(BLOCK_SIZE, BLOCK_SIZE, MAXIMUM_AA); 
-	dim3 gridSize((width + blockSize.x - 1) / blockSize.x, (height + blockSize.y - 1) / blockSize.y, (rendererSettings.sampleCount + blockSize.z - 1) / blockSize.z);
+	dim3 gridSize((width + blockSize.x - 1) / blockSize.x, (height + blockSize.y - 1) / blockSize.y);
 
 	raytraceKernel<<<gridSize, blockSize>>>(camSettings, canvas, objectDataVector, rendererSettings, debug, debugInfo);
 	checkCudaErrors(cudaPeekAtLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 
 	// Transfer Debug Output
-	if (debug)
+	if (debug) 
 	{
 		DebugInfo* debugInfoHost = new DebugInfo;
 		checkCudaErrors(cudaMemcpy(debugInfoHost, debugInfo, sizeof(DebugInfo), cudaMemcpyDeviceToHost));
@@ -102,34 +102,43 @@ void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera
 
 __global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, ObjectDataVector objectDataVector, const RendererParams renderer, const bool debug, DebugInfo* debugInfo)
 {
-	__shared__ float4 sharedMemory[BLOCK_SIZE][BLOCK_SIZE][MAXIMUM_AA];
+	__shared__ float4 sharedMemory[BLOCK_SIZE][BLOCK_SIZE][MAXIMUM_AA]; 
 	unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
 	unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
-	unsigned int z = blockIdx.z * blockDim.z + threadIdx.z;
 
-	if (x >= camera.width || y >= camera.height || z >= renderer.sampleCount)
+	if (x >= camera.width || y >= camera.height || threadIdx.z >= renderer.sampleCount)
 		return;
 
-	bool isCenter = x == camera.width / 2 && y == camera.height / 2 && z == 0;
+	float4 color = make_float4(0.0f, 0.0f, 0.0f, 1.0f); 
+	for (int iter = 0; iter < (renderer.sampleCount + MAXIMUM_AA - 1) / MAXIMUM_AA; iter++) 
+	{
+		if (iter * MAXIMUM_AA + threadIdx.z >= renderer.sampleCount) break; // Early exit (if sampleCount is not a multiple of MAXIMUM_AA)
 
-	unsigned int seed = (x + y * camera.width + threadIdx.z * 345804 + renderer.frameCount * 719393);
+		bool isCenter = x == camera.width / 2 && y == camera.height / 2 && threadIdx.z == 0 && iter == 0;
 
-	GPURay ray = setupRay(camera, x, y, renderer.bounceCount, renderer.maxDistance, renderer.antiAliasingEnabled, seed);
+		unsigned int seed = (x + y * camera.width + (iter * MAXIMUM_AA + threadIdx.z) * 345804 + renderer.frameCount * 719393);
 
-	float4 color = trace(ray, objectDataVector, renderer.aoIntensity, seed, (debug && isCenter), debugInfo);
+		GPURay ray = setupRay(camera, x, y, renderer.bounceCount, renderer.maxDistance, renderer.antiAliasingEnabled, seed);
 
-	color = exposureCorrection(color, camera.exposure);
+		float4 partialColor = trace(ray, objectDataVector, renderer.aoIntensity, seed, (debug && isCenter), debugInfo);
+
+		partialColor = exposureCorrection(partialColor, camera.exposure);
+
+		color.x += partialColor.x;
+		color.y += partialColor.y;
+		color.z += partialColor.z;
+	}
 
 	sharedMemory[threadIdx.x][threadIdx.y][threadIdx.z] = color;
 	__syncthreads();
 
 	if (threadIdx.z == 0) {
 		color = make_float4(0.0f, 0.0f, 0.0f, 1.0f);
-		for (int i = 0; i < blockDim.z; i++) {
+		for (int i = 0; i < MAXIMUM_AA; i++) {
 			color.x += sharedMemory[threadIdx.x][threadIdx.y][i].x;
 			color.y += sharedMemory[threadIdx.x][threadIdx.y][i].y;
 			color.z += sharedMemory[threadIdx.x][threadIdx.y][i].z;
-		}
+		}  
 		color.x /= renderer.sampleCount;
 		color.y /= renderer.sampleCount;
 		color.z /= renderer.sampleCount;

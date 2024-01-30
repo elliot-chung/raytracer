@@ -26,6 +26,8 @@ public:
 	inline float getAOIntensity() { return aoIntensity; }
 	inline bool getProgressiveRendering() { return progressiveRendering; }
 	
+	inline int getSampleCount() { return sampleCount; }
+	inline void setSampleCount(int count) { sampleCount = count; }
 
 	inline void setAntiAliasingEnabled(bool enabled) { antiAliasingEnabled = enabled; }
 	inline bool getAntiAliasingEnabled() { return antiAliasingEnabled; }

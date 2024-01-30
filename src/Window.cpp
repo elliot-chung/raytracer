@@ -354,6 +354,8 @@ void Window::displayWindowGUI(ImGuiIO& io)
     static float maxDistance = rtCPU->getMaxDistance();
     static float aoIntensity = rtCPU->getAOIntensity(); 
 
+    static int sampleRate = rtCPU->getSampleCount();
+
     if (show_demo_window) ImGui::ShowDemoWindow(&show_demo_window);
 
     ImGui::Begin("Render Options");                          
@@ -367,6 +369,7 @@ void Window::displayWindowGUI(ImGuiIO& io)
     ImGui::InputInt("Bounce Count", &bounceCount, 1, 2);
     ImGui::InputFloat("Max Distance", &maxDistance, 1.0f, 10.0f);
     ImGui::InputFloat("AO Intensity", &aoIntensity, 0.005f, 0.05f);
+    ImGui::InputInt("Sample Rate", &sampleRate, 1, 2);
 
 	{
         rtGPU->setBounceCount(bounceCount);
@@ -374,15 +377,18 @@ void Window::displayWindowGUI(ImGuiIO& io)
         rtGPU->setAOIntensity(aoIntensity);
         rtGPU->setProgressiveRendering(progressiveRendering);
         rtGPU->setAntiAliasingEnabled(antiAliasing);
+        rtGPU->setSampleCount(sampleRate);
+        rtGPU->setDebug(ImGui::Button("Debug"));
 
 		rtCPU->setBounceCount(bounceCount);
 		rtCPU->setMaxDistance(maxDistance);
 		rtCPU->setAOIntensity(aoIntensity);
         rtCPU->setProgressiveRendering(progressiveRendering);
+        rtCPU->setSampleCount(sampleRate);
         rtCPU->setAntiAliasingEnabled(antiAliasing);
 	}
     
-    rtGPU->setDebug(ImGui::Button("Debug"));
+   
 
     if (ImGui::Button("Take Screenshot"))
     {
