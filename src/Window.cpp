@@ -223,33 +223,46 @@ void Window::createSurfaceObject()
 
 void Window::renderLoop()
 {
-    Material mat1("redmat", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), 1.0f);
-    Material mat2("bluemat", glm::vec4(0.0f, 0.0f, 1.0f, 1.0f), 1.0f);
-    Material mat3("lightmat", glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0.0f, glm::vec3(1.0f, 1.0f, 1.0f), 10.0f);
-    Material mat4("mirrormat", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), 0.0f);
+    Material mat1("floormat", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), 1.0f);
+
+    Material mat2("lightmat", glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0.0f, glm::vec3(1.0f, 1.0f, 1.0f), 10000.0f); 
+
+    Material mat3("smoothhalfmetal", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), 0.0f, 0.5f);
+    Material mat4("halfsmoothmetal", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), 0.5f, 1.0f);
+    Material mat5("roughhalfmetal", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0.5f);
+    Material mat6("halfsmoothdielectric", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), 0.5f, 0.0f);
 
     mat1.sendToGPU();
     mat2.sendToGPU();
     mat3.sendToGPU();
     mat4.sendToGPU();
+    mat5.sendToGPU();
+    mat6.sendToGPU();
+
 
     Cube cube(glm::vec3(0.0f, -1.0f, 0.0f), glm::quat(), glm::vec3(100.0f, 1.0f, 100.0f));
     scene->addToScene("cube", &cube);
-    cube.setMaterialName("redmat");
+    cube.setMaterialName("floormat");
 
-    Cube cube2(glm::vec3(0.0f, 0.2f, 0.0f));
+    Cube cube2(glm::vec3(0.0f, 2.0f, 0.0f));
     scene->addToScene("cube2", &cube2);
-    cube2.setMaterialName("bluemat");
-    
-    Cube cube3(glm::vec3(0.0f, 2.0f, 0.0f));
-    scene->addToScene("cube3", &cube3);
-    cube3.setMaterialName("lightmat");
+    cube2.setMaterialName("lightmat");
 
-    Cube cube4(glm::vec3(0.0f, 2.0f, -1.05f), glm::quat(), glm::vec3(3.0f, 4.0f, 0.25f));
+    Cube cube3(glm::vec3(-1.5f, 0.0f, -1.5f)); 
+    scene->addToScene("cube3", &cube3); 
+    cube3.setMaterialName("smoothhalfmetal"); 
+
+    Cube cube4(glm::vec3(1.5f, 0.0f, -1.5f));
     scene->addToScene("cube4", &cube4);
-	cube4.setMaterialName("mirrormat");
+    cube4.setMaterialName("halfsmoothmetal");
 
+    Cube cube5(glm::vec3(-1.5f, 0.0f, 1.5f));
+	scene->addToScene("cube5", &cube5);
+    cube5.setMaterialName("roughhalfmetal");
 
+    Cube cube6(glm::vec3(1.5f, 0.0f, 1.5f));
+    scene->addToScene("cube6", &cube6);
+    cube6.setMaterialName("halfsmoothdielectric");
     
     ImGuiIO& io = ImGui::GetIO();
 
@@ -387,8 +400,6 @@ void Window::displayWindowGUI(ImGuiIO& io)
         rtCPU->setSampleCount(sampleRate);
         rtCPU->setAntiAliasingEnabled(antiAliasing);
 	}
-    
-   
 
     if (ImGui::Button("Take Screenshot"))
     {

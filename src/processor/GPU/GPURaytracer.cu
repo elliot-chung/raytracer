@@ -116,7 +116,7 @@ __global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, 
 
 		bool isCenter = x == camera.width / 2 && y == camera.height / 2 && threadIdx.z == 0 && iter == 0;
 
-		unsigned int seed = (x + y * camera.width + (iter * MAXIMUM_AA + threadIdx.z) * 345804 + renderer.frameCount * 719393);
+		unsigned int seed = (x + y * camera.width + (iter * MAXIMUM_AA + threadIdx.z) * 34673804 + renderer.frameCount * 719393);
 
 		GPURay ray = setupRay(camera, x, y, renderer.bounceCount, renderer.maxDistance, renderer.antiAliasingEnabled, seed);
 
@@ -146,12 +146,19 @@ __global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, 
 		return;
 	}
 
+	// Clamp color values
+	color.x = fminf(fmaxf(color.x, 0.0f), 1.0f);
+	color.y = fminf(fmaxf(color.y, 0.0f), 1.0f);
+	color.z = fminf(fmaxf(color.z, 0.0f), 1.0f);
+
 	if (renderer.progressiveFrameCount != 0) {
 		float4 prevColor = surf2Dread<float4>(canvas, x * sizeof(float4), y);
 		color.x = (color.x + prevColor.x * renderer.progressiveFrameCount) / (renderer.progressiveFrameCount + 1);
 		color.y = (color.y + prevColor.y * renderer.progressiveFrameCount) / (renderer.progressiveFrameCount + 1);
 		color.z = (color.z + prevColor.z * renderer.progressiveFrameCount) / (renderer.progressiveFrameCount + 1);
 	} 
+
+	
 	surf2Dwrite(color, canvas, x * sizeof(float4), y);
 }
 
@@ -182,16 +189,19 @@ __device__ GPURay setupRay(const CameraParams& camera, const int x, const int y,
 
 __device__ float4 trace(GPURay& ray, const ObjectDataVector& objectDataVector, const float aoIntensity, unsigned int& seed, const bool debug, DebugInfo* debugInfo)
 {
-	float4 incomingLight = make_float4(0.0f, 0.0f, 0.0f, 1.0f); 
-	float4 rayColor = make_float4(1.0f, 1.0f, 1.0f, 1.0f);
+	float4 outgoingLight = make_float4(0.0f, 0.0f, 0.0f, 1.0f);  
+	float4 betaAccumulation = make_float4(1.0f, 1.0f, 1.0f, 1.0f);
 	
+	// Bounce Loop
+	// i - bounce iteration (each iteration is a bounce)
 	for (int i = 0; i < ray.bounceCount; i++)
 	{
+		// Find ray object intersection and populate material data accodingly (break out on miss)
 		GPURayHit closestHit = getIntersectionPoint(ray, objectDataVector); 
 		if (!closestHit.didHit) break;
 		GPUMaterialPositionData materialData = getMaterialData(closestHit); 
 
-		// Debug
+		// Populate Debug info based on hit information
 		if (debug)
 		{
 			if (i == 0) 
@@ -213,35 +223,64 @@ __device__ float4 trace(GPURay& ray, const ObjectDataVector& objectDataVector, c
 			}
 		}
 		
+		// Outgoing light only increases on the first hit (ambient occlusion) or when hitting an emissive material
 		if (i == 0) // First Hit
 		{
 			// Ambient Occlusion
-			incomingLight.x += materialData.ao.x * materialData.albedo.x * aoIntensity;
-			incomingLight.y += materialData.ao.y * materialData.albedo.y * aoIntensity;
-			incomingLight.z += materialData.ao.z * materialData.albedo.z * aoIntensity;
+			outgoingLight.x += materialData.ao.x * materialData.albedo.x * aoIntensity; 
+			outgoingLight.y += materialData.ao.y * materialData.albedo.y * aoIntensity; 
+			outgoingLight.z += materialData.ao.z * materialData.albedo.z * aoIntensity; 
 		}
 
 		// Emission
 		float4 emittedLight = materialData.emission;
-		incomingLight.x += emittedLight.x * emittedLight.w * rayColor.x;
-		incomingLight.y += emittedLight.y * emittedLight.w * rayColor.y; 
-		incomingLight.z += emittedLight.z * emittedLight.w * rayColor.z; 
+		outgoingLight.x += emittedLight.x * emittedLight.w * betaAccumulation.x;  
+		outgoingLight.y += emittedLight.y * emittedLight.w * betaAccumulation.y;  
+		outgoingLight.z += emittedLight.z * emittedLight.w * betaAccumulation.z;  
 
-		// Accumulate Color data
-		rayColor.x *= materialData.albedo.x;
-		rayColor.y *= materialData.albedo.y; 
-		rayColor.z *= materialData.albedo.z;
-
-		if (i < ray.bounceCount - 1) // Calculate bounce ray
+		// Cook-torrance BRDF credit: https://learnopengl.com/PBR/Lighting
+		if (i < ray.bounceCount - 1) // Only if there's another iteration after this one
 		{
-			ray.origin = closestHit.hitPosition;
-			float4 diffuseDirection = randomUnitVectorInCosineHemisphere(seed, materialData.normal);  
-			float4 specularDirection = reflect(ray.direction, materialData.normal);
-			ray.direction = normalize(lerp(specularDirection, diffuseDirection, materialData.roughness));  
+			float attenuation = 1.0f / (closestHit.distance * closestHit.distance); 
+			float4 N = materialData.normal;
+			float4 diffuseDirection = randomUnitVectorInCosineHemisphere(seed, N);  
+			float4 specularDirection = reflect(ray.direction, N);
+			float4 L = normalize(lerp(specularDirection, diffuseDirection, materialData.roughness));  
+			float4 V = negate(ray.direction);
+			float4 H = normalize(make_float4(L.x + V.x, L.y + V.y, L.z + V.z, 0.0f));
+
+			float4 F0 = make_float4(0.04f, 0.04f, 0.04f, 1.0f);
+			F0 = lerp(F0, materialData.albedo, materialData.metal);
+			
+			float NDF = distributionGGX(N, H, materialData.roughness);
+			float G = geometrySmith(N, V, L, materialData.roughness);
+			float4 F = fresnelSchlick(max(dot(H, V), 0.0f), F0); 
+
+			float4 kD = make_float4(1.0f - F.x, 1.0f - F.y, 1.0f - F.z, 1.0f);
+			float metalComplement = 1.0f - materialData.metal;
+			kD.x = kD.x * metalComplement;
+			kD.y = kD.y * metalComplement;	
+			kD.z = kD.z * metalComplement;
+
+			
+			float4 numerator = make_float4(NDF * G * F.x, NDF * G * F.y, NDF * G * F.z, 1.0f);
+			float denominator = 4.0f * max(dot(N, V), 0.0f) * max(dot(N, L), 0.0f) + 0.0001f;
+			float4 specular = make_float4(numerator.x / denominator, numerator.y / denominator, numerator.z / denominator, 1.0f);
+
+			// Accumulate Color data
+			float NdotL = max(dot(N, L), 0.0f);
+			betaAccumulation.x *= (kD.x * materialData.albedo.x / PI + specular.x) * attenuation * NdotL; 
+			betaAccumulation.y *= (kD.y * materialData.albedo.y / PI + specular.y) * attenuation * NdotL;
+			betaAccumulation.z *= (kD.z * materialData.albedo.z / PI + specular.z) * attenuation * NdotL;
+
+			// Update Ray
+			float nudgeStrength = 0.0001f;
+			ray.origin = make_float4(closestHit.hitPosition.x + N.x * nudgeStrength, closestHit.hitPosition.y + N.y * nudgeStrength, closestHit.hitPosition.z + N.z * nudgeStrength, 1.0f);
+			ray.direction = L; 
 		}
 	} 
 
-	return incomingLight;
+	return outgoingLight;
 }
 
 __device__ GPURayHit getIntersectionPoint(const GPURay& ray, const ObjectDataVector& dataVector)
@@ -435,6 +474,19 @@ __device__ GPUTriangleHit distToTriangle(const GPURay& ray, const float4& v0, co
 	float e1 = v2t.x * v0t.y - v2t.y * v0t.x; 
 	float e2 = v0t.x * v1t.y - v0t.y * v1t.x; 
 
+	if (e0 == 0.0f || e1 == 0.0f || e2 == 0.0f)
+	{
+		double p2txp1ty = (double)v2t.x * (double)v1t.y;
+		double p2typ1tx = (double)v2t.y * (double)v1t.x;
+		e0 = (float)(p2typ1tx - p2txp1ty);
+		double p0txp2ty = (double)v0t.x * (double)v2t.y;
+		double p0typ2tx = (double)v0t.y * (double)v2t.x;
+		e1 = (float)(p0typ2tx - p0txp2ty);
+		double p1txp0ty = (double)v1t.x * (double)v0t.y;
+		double p1typ0tx = (double)v1t.y * (double)v0t.x;
+		e2 = (float)(p1typ0tx - p1txp0ty);
+	}
+
 	if ((e0 < 0 || e1 < 0 || e2 < 0) && (e0 > 0 || e1 > 0 || e2 > 0))
 		return output;
 	float det = e0 + e1 + e2;
@@ -459,7 +511,7 @@ __device__ GPUTriangleHit distToTriangle(const GPURay& ray, const float4& v0, co
 	float b2 = e2 * invDet;
 	float t = tScaled * invDet;
 
-	if (t < 0.00001 || t > ray.maxDistance)
+	if (t < 0.001 || t > ray.maxDistance)
 		return output;
 
 	
@@ -470,6 +522,57 @@ __device__ GPUTriangleHit distToTriangle(const GPURay& ray, const float4& v0, co
 	
 	return output;
 }
+
+// Credit https://learnopengl.com/PBR/Lighting
+__device__ float4 fresnelSchlick(const float cosTheta, const float4& f0)
+{
+	return make_float4(
+		f0.x + (1.0f - f0.x) * powf(1.0f - min(cosTheta, 1.0f), 5.0f),
+		f0.y + (1.0f - f0.y) * powf(1.0f - min(cosTheta, 1.0f), 5.0f),
+		f0.z + (1.0f - f0.z) * powf(1.0f - min(cosTheta, 1.0f), 5.0f), 
+		1.0f
+	);
+}
+
+// Credit https://learnopengl.com/PBR/Lighting 
+__device__ float distributionGGX(const float4& n, const float4& h, const float roughness)
+{
+	float a = roughness * roughness;
+	float a2 = a * a;
+	float NdotH = max(0.0f, dot(n, h));
+	float NdotH2 = NdotH * NdotH;
+
+	float num = a2;
+	float denom = (NdotH2 * (a2 - 1.0f) + 1.0f);
+	denom = PI * denom * denom;
+
+	return num / (denom + 0.00001f);
+}
+
+// Credit https://learnopengl.com/PBR/Lighting
+__device__ float geometrySchlickGGX(const float NdotV, const float roughness)
+{
+	float r = (roughness + 1.0f);
+	float k = (r * r) / 8.0f;
+
+	float num = NdotV;
+	float denom = NdotV * (1.0f - k) + k;
+
+	return num / denom;
+} 
+
+// Credit https://learnopengl.com/PBR/Lighting
+__device__ float geometrySmith(const float4& n, const float4& v, const float4& l, const float roughness)
+{
+	float NdotV = max(dot(n, v), 0.0f);
+	float NdotL = max(dot(n, l), 0.0f);
+	float ggx1 = geometrySchlickGGX(NdotV, roughness);
+	float ggx2 = geometrySchlickGGX(NdotL, roughness);
+
+	return ggx1 * ggx2;
+} 
+
+
 
 __device__ __forceinline__ float4 exposureCorrection(const float4 color, const float exposure)
 {
@@ -577,7 +680,7 @@ __device__ __forceinline__ float randomValue(unsigned int& seed)
 
 __device__ __forceinline__ float randomValueNormalDistribution(unsigned int& seed)
 {
-	float theta = 2 * 3.1415926 * randomValue(seed);
+	float theta = 2 * PI * randomValue(seed);
 	float r = randomValue(seed);
 	float rho = sqrt(-2 * log(r));
 	return rho * cos(theta);

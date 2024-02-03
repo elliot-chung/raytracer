@@ -168,6 +168,14 @@ __device__ GPURayHit getIntersectionPoint(const GPURay& ray, const ObjectData& d
 
 __device__ GPUTriangleHit distToTriangle(const GPURay& ray, const float4& v0, const float4& v1, const float4& v2);
 
+__device__ float4 fresnelSchlick(const float cosTheta, const float4& f0);
+
+__device__ float distributionGGX(const float4& n, const float4& h, const float roughness); 
+
+__device__ float geometrySchlickGGX(const float NdotV, const float roughness); 
+
+__device__ float geometrySmith(const float4& n, const float4& v, const float4& l, const float roughness);
+
 __device__ __forceinline__ float4 exposureCorrection(const float4 color, const float exposure);
 
 // GPU math functions

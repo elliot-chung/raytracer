@@ -13,6 +13,8 @@
 #define MAX_DISTANCE 100.0f
 #define AO_INTENSITY 0.01f
 
+#define PI 3.141592f
+
 class Raytracer
 {
 public:
