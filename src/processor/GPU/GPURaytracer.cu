@@ -1,5 +1,14 @@
 #include "GPURaytracer.hpp"
 
+float4 getSkyLight(const float4& direction, const float4& lightDirection, const float4& lightColor, const float4& skyColor) 
+{
+	float dotProduct = dot(direction, lightDirection);
+	if (1.0f - dotProduct < 0.01f)
+		return lightColor;
+	else
+		return skyColor;
+}
+
 void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera> camera, cudaSurfaceObject_t canvas)
 {
 	// Camera Parameters
@@ -27,6 +36,12 @@ void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera
 	rendererSettings.progressiveFrameCount = progressiveFrameCount;
 	rendererSettings.antiAliasingEnabled = antiAliasingEnabled;
 	rendererSettings.sampleCount = sampleCount;
+
+	SkyLightParams skyLightSettings = {}; 
+	skyLightSettings.direction = lightDirection;
+	skyLightSettings.lightColor = lightColor;
+	skyLightSettings.skyColor = skyColor;
+
 
 	// Transfer Scene Data to GPU
 	Scene::ObjectMap objects = scene->getObjects();
@@ -62,7 +77,7 @@ void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera
 	dim3 blockSize(BLOCK_SIZE, BLOCK_SIZE, MAXIMUM_AA); 
 	dim3 gridSize((width + blockSize.x - 1) / blockSize.x, (height + blockSize.y - 1) / blockSize.y);
 
-	raytraceKernel<<<gridSize, blockSize>>>(camSettings, canvas, objectDataVector, rendererSettings, debug, debugInfo);
+	raytraceKernel<<<gridSize, blockSize>>>(camSettings, canvas, objectDataVector, rendererSettings, skyLightSettings, debug, debugInfo);
 	checkCudaErrors(cudaPeekAtLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 
@@ -100,7 +115,7 @@ void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera
 
 
 
-__global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, ObjectDataVector objectDataVector, const RendererParams renderer, const bool debug, DebugInfo* debugInfo)
+__global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, ObjectDataVector objectDataVector, const RendererParams renderer, const SkyLightParams skylight, const bool debug, DebugInfo* debugInfo)
 {
 	__shared__ float4 sharedMemory[BLOCK_SIZE][BLOCK_SIZE][MAXIMUM_AA]; 
 	unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -120,7 +135,7 @@ __global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, 
 
 		GPURay ray = setupRay(camera, x, y, renderer.bounceCount, renderer.maxDistance, renderer.antiAliasingEnabled, seed);
 
-		float4 partialColor = trace(ray, objectDataVector, renderer.aoIntensity, seed, (debug && isCenter), debugInfo);
+		float4 partialColor = trace(ray, objectDataVector, skylight, renderer.aoIntensity, seed, (debug && isCenter), debugInfo);
 
 		partialColor = exposureCorrection(partialColor, camera.exposure);
 
@@ -187,7 +202,7 @@ __device__ GPURay setupRay(const CameraParams& camera, const int x, const int y,
 	return ray;
 }
 
-__device__ float4 trace(GPURay& ray, const ObjectDataVector& objectDataVector, const float aoIntensity, unsigned int& seed, const bool debug, DebugInfo* debugInfo)
+__device__ float4 trace(GPURay& ray, const ObjectDataVector& objectDataVector, SkyLightParams skylight, const float aoIntensity, unsigned int& seed, const bool debug, DebugInfo* debugInfo)
 {
 	float4 outgoingLight = make_float4(0.0f, 0.0f, 0.0f, 1.0f);  
 	float4 betaAccumulation = make_float4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -198,7 +213,14 @@ __device__ float4 trace(GPURay& ray, const ObjectDataVector& objectDataVector, c
 	{
 		// Find ray object intersection and populate material data accodingly (break out on miss)
 		GPURayHit closestHit = getIntersectionPoint(ray, objectDataVector); 
-		if (!closestHit.didHit) break;
+		if (!closestHit.didHit)
+		{
+			float4 missColor = getSkyLight(ray.direction, skylight.direction, skylight.lightColor, skylight.skyColor);
+			outgoingLight.x += missColor.x * missColor.w * betaAccumulation.x;
+			outgoingLight.y += missColor.y * missColor.w * betaAccumulation.y;
+			outgoingLight.z += missColor.z * missColor.w * betaAccumulation.z;
+			break;
+		}
 		GPUMaterialPositionData materialData = getMaterialData(closestHit); 
 
 		// Populate Debug info based on hit information
@@ -241,7 +263,8 @@ __device__ float4 trace(GPURay& ray, const ObjectDataVector& objectDataVector, c
 		// Cook-torrance BRDF credit: https://learnopengl.com/PBR/Lighting
 		if (i < ray.bounceCount - 1) // Only if there's another iteration after this one
 		{
-			float attenuation = 1.0f / (closestHit.distance * closestHit.distance); 
+			// float attenuation = 1.0f / (closestHit.distance * closestHit.distance); 
+			float attenuation = 1.0f;
 			float4 N = materialData.normal;
 			float4 diffuseDirection = randomUnitVectorInCosineHemisphere(seed, N);  
 			float4 specularDirection = reflect(ray.direction, N);

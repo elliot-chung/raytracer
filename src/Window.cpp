@@ -225,7 +225,7 @@ void Window::renderLoop()
 {
     Material mat1("floormat", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), 1.0f);
 
-    Material mat2("lightmat", glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0.0f, glm::vec3(1.0f, 1.0f, 1.0f), 10000.0f); 
+    Material mat2("lightmat", glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0.0f, glm::vec3(1.0f, 1.0f, 1.0f), 1.0f); 
 
     Material mat3("smoothhalfmetal", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), 0.0f, 0.5f);
     Material mat4("halfsmoothmetal", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), 0.5f, 1.0f);
@@ -359,7 +359,7 @@ inline void flipVertical(unsigned char* image, unsigned int width, unsigned int 
 void Window::displayWindowGUI(ImGuiIO& io)
 {
 	static bool show_demo_window = false;    
-    static int counter = 1;
+    static int counter = 1;  // Eventually replace with a timestamp
     static bool progressiveRendering = rtCPU->getProgressiveRendering();
     static bool antiAliasing = (bool)rtCPU->getAntiAliasingEnabled();
     
@@ -368,6 +368,11 @@ void Window::displayWindowGUI(ImGuiIO& io)
     static float aoIntensity = rtCPU->getAOIntensity(); 
 
     static int sampleRate = rtCPU->getSampleCount();
+
+    static float lightYaw = 0.0f;
+    static float lightPitch = 0.0f;
+    static float4 lightColor = make_float4(1.0f, 1.0f, 1.0f, 100.0f);
+    static float4 skyColor = make_float4(0.5f, 0.5f, 1.0f, 0.3f);
 
     if (show_demo_window) ImGui::ShowDemoWindow(&show_demo_window);
 
@@ -383,6 +388,12 @@ void Window::displayWindowGUI(ImGuiIO& io)
     ImGui::InputFloat("Max Distance", &maxDistance, 1.0f, 10.0f);
     ImGui::InputFloat("AO Intensity", &aoIntensity, 0.005f, 0.05f);
     ImGui::InputInt("Sample Rate", &sampleRate, 1, 2);
+    ImGui::InputFloat("Light Yaw", &lightYaw, 0.1f, 0.2f);
+    ImGui::InputFloat("Light Pitch", &lightPitch, 0.1f, 0.2f);
+    ImGui::ColorEdit3("Light Color", &lightColor.x);
+    ImGui::InputFloat("Light Intensity", &lightColor.w, 10.0f, 100.0f);
+    ImGui::ColorEdit3("Sky Color", &skyColor.x); 
+    ImGui::InputFloat("Sky Intensity", &skyColor.w, 10.0f, 100.0f);
 
 	{
         rtGPU->setBounceCount(bounceCount);
@@ -391,6 +402,8 @@ void Window::displayWindowGUI(ImGuiIO& io)
         rtGPU->setProgressiveRendering(progressiveRendering);
         rtGPU->setAntiAliasingEnabled(antiAliasing);
         rtGPU->setSampleCount(sampleRate);
+        rtGPU->setSkyLight(lightPitch, lightYaw, lightColor, skyColor);
+
         rtGPU->setDebug(ImGui::Button("Debug"));
 
 		rtCPU->setBounceCount(bounceCount);
@@ -399,6 +412,7 @@ void Window::displayWindowGUI(ImGuiIO& io)
         rtCPU->setProgressiveRendering(progressiveRendering);
         rtCPU->setSampleCount(sampleRate);
         rtCPU->setAntiAliasingEnabled(antiAliasing);
+        rtGPU->setSkyLight(lightPitch, lightYaw, lightColor, skyColor); 
 	}
 
     if (ImGui::Button("Take Screenshot"))

@@ -95,6 +95,13 @@ struct CameraParams
 	cudaTextureObject_t rays;
 };
 
+struct SkyLightParams
+{
+	float4 direction;
+	float4 lightColor;
+	float4 skyColor;
+};
+
 struct RendererParams
 {
 	int bounceCount;
@@ -152,11 +159,11 @@ private:
 }; 
 
 // GPU kernel forward declarations
-__global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, ObjectDataVector objectDataVector, const RendererParams renderer, const bool debug, DebugInfo* debugInfo);
+__global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, ObjectDataVector objectDataVector, const RendererParams renderer, const SkyLightParams skylight, const bool debug, DebugInfo* debugInfo);
 
 __device__ GPURay setupRay(const CameraParams& camera, const int x, const int y, const int bounceCount, const float maxDistance, const bool aaEnabled, unsigned int& seed);
 
-__device__ float4 trace(GPURay& ray, const ObjectDataVector& objectDataVector, const float aoIntensity, unsigned int& seed, const bool debug, DebugInfo* debugInfo);
+__device__ float4 trace(GPURay& ray, const ObjectDataVector& objectDataVector, SkyLightParams skylight, const float aoIntensity, unsigned int& seed, const bool debug, DebugInfo* debugInfo);
 
 __device__ GPURayHit getIntersectionPoint(const GPURay& ray, const ObjectDataVector& dataVector);
 
@@ -175,6 +182,8 @@ __device__ float distributionGGX(const float4& n, const float4& h, const float r
 __device__ float geometrySchlickGGX(const float NdotV, const float roughness); 
 
 __device__ float geometrySmith(const float4& n, const float4& v, const float4& l, const float roughness);
+
+__device__ float4 getSkyLight(const float4& direction, const float4& lightDirection, const float4& lightColor, const float4& skyColor); 
 
 __device__ __forceinline__ float4 exposureCorrection(const float4 color, const float exposure);
 

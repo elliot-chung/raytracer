@@ -34,6 +34,15 @@ public:
 	inline void setAntiAliasingEnabled(bool enabled) { antiAliasingEnabled = enabled; }
 	inline bool getAntiAliasingEnabled() { return antiAliasingEnabled; }
 
+	inline void setSkyLight(float pitch, float yaw, float4 light, float4 sky) 
+	{ 
+		lightColor = light;
+		skyColor = sky;
+		lightDirection = make_float4(cos(pitch) * cos(yaw), sin(pitch), cos(pitch) * sin(yaw), 0.0f);
+	}
+
+	
+
 protected:
 	int bounceCount = BOUNCE_COUNT;
 	float maxDistance = MAX_DISTANCE;
@@ -47,4 +56,8 @@ protected:
 	bool antiAliasingEnabled = false;
 
 	unsigned int sampleCount = 1;
+
+	float4 lightDirection;
+	float4 lightColor;
+	float4 skyColor;
 };
