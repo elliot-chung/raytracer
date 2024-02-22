@@ -225,14 +225,18 @@ void Window::renderLoop()
 {
     Material mat1("floormat", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), 1.0f);
 
-    mat1.setAlbedoTexture("res/wood.jpg");
-
     Material mat2("lightmat", glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0.0f, glm::vec3(1.0f, 1.0f, 1.0f), 1.0f); 
 
     Material mat3("smoothhalfmetal", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), 0.0f, 0.5f);
     Material mat4("halfsmoothmetal", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), 0.5f, 1.0f);
     Material mat5("roughhalfmetal", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0.5f);
     Material mat6("halfsmoothdielectric", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), 0.5f, 0.0f);
+    Material mat7("pbrmat");
+
+    mat7.setAlbedoTexture("res/metalmaterial/Metal046B_1K-PNG_Color.png");
+    mat7.setNormalTexture("res/metalmaterial/Metal046B_1K-PNG_NormalGL.png");
+    mat7.setMetalTexture("res/metalmaterial/Metal046B_1K-PNG_Metalness.png");
+    mat7.setRoughnessTexture("res/metalmaterial/Metal046B_1K-PNG_Roughness.png");
 
     mat1.sendToGPU();
     mat2.sendToGPU();
@@ -240,7 +244,7 @@ void Window::renderLoop()
     mat4.sendToGPU();
     mat5.sendToGPU();
     mat6.sendToGPU();
-
+    mat7.sendToGPU();
 
     Cube cube(glm::vec3(0.0f, -1.0f, 0.0f), glm::quat(), glm::vec3(100.0f, 1.0f, 100.0f));
     scene->addToScene("cube", &cube);
@@ -265,6 +269,10 @@ void Window::renderLoop()
     Cube cube6(glm::vec3(1.5f, 0.0f, 1.5f));
     scene->addToScene("cube6", &cube6);
     cube6.setMaterialName("halfsmoothdielectric");
+
+    Cube cube7(glm::vec3(0.0f, 4.0f, 0.0f));
+    scene->addToScene("cube7", &cube7);
+	cube7.setMaterialName("pbrmat");
     
     ImGuiIO& io = ImGui::GetIO();
 
