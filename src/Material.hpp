@@ -23,6 +23,7 @@ public:
 	inline int getWidth() { return width; }
 	inline int getHeight() { return height; }
 	inline int size() { return dataSize; }
+	inline float* getData() { return data; }
 	inline bool getLoadSuccess() { return loadSuccess; }
 
 	static inline Texture* getTexture(char const* path) { return textureMap[path].second; }

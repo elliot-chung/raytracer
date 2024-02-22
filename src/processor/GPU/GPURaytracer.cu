@@ -101,7 +101,7 @@ void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera
 		std::cout << "Second Hit Distance:\t" << debugInfoHost->secondDistance << "\n" << std::endl;
 	}
 	
-	frameCount = frameCount + 1;
+	frameCount++;
 	if (progressiveRendering)
 		progressiveFrameCount++;
 	else 

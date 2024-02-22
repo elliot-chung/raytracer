@@ -38,6 +38,34 @@ void Material::sendToGPU()
 	hostCopy.emissionColor = make_float3(simpleEmissionColor.r, simpleEmissionColor.g, simpleEmissionColor.b);
 	hostCopy.emissionStrength = emissionStrength;
 
+	if (albedoTexture != 0)
+	{
+		cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<float4>();
+		cudaArray* cuArray;
+		checkCudaErrors(cudaMallocArray(&cuArray, &channelDesc, albedoTexture->getWidth(), albedoTexture->getHeight()));
+
+		const size_t spitch = albedoTexture->getWidth() * sizeof(float4);
+		checkCudaErrors(cudaMemcpy2DToArray(cuArray, 0, 0, albedoTexture->getData(), spitch, albedoTexture->getWidth() * sizeof(float4), albedoTexture->getHeight(), cudaMemcpyHostToDevice)); 
+		
+		struct cudaResourceDesc resDesc;
+		memset(&resDesc, 0, sizeof(resDesc));
+		resDesc.resType = cudaResourceTypeArray;
+		resDesc.res.array.array = cuArray;
+
+		struct cudaTextureDesc texDesc;
+		memset(&texDesc, 0, sizeof(texDesc)); 
+		texDesc.addressMode[0] = cudaAddressModeClamp; 
+		texDesc.addressMode[1] = cudaAddressModeClamp; 
+		texDesc.filterMode = cudaFilterModeLinear; 
+		texDesc.readMode = cudaReadModeElementType; 
+		texDesc.normalizedCoords = 1;
+
+		checkCudaErrors(cudaCreateTextureObject(&hostCopy.albedoTexture, &resDesc, &texDesc, NULL));
+
+	}
+	else
+		hostCopy.albedoTexture = 0;
+
 	checkCudaErrors(cudaMalloc(&gpuMaterial, sizeof(GPUMaterial)));
 	checkCudaErrors(cudaMemcpy(gpuMaterial, &hostCopy, sizeof(GPUMaterial), cudaMemcpyHostToDevice));
 }
@@ -160,6 +188,20 @@ Texture::Texture(const char* path)
 			loadSuccess = false;
 			return;
 		}
+		// Convert to 4 channels
+		{
+			unsigned char* ndata = new unsigned char[width * height * 4];
+			for (int i = 0; i < width * height; i++)
+			{
+				ndata[i * 4] = idata[i * nChannels];
+				ndata[i * 4 + 1] = idata[i * nChannels + 1];
+				ndata[i * 4 + 2] = idata[i * nChannels + 2];
+				ndata[i * 4 + 3] = nChannels == 4 ? idata[i * nChannels + 3] : 255;
+			}
+			stbi_image_free(idata); 
+			idata = ndata;
+			nChannels = 4;
+		}
 		loadSuccess = true;
 		dataSize = width * height * nChannels;
 		data = new float[dataSize];
@@ -167,7 +209,7 @@ Texture::Texture(const char* path)
 		{
 			data[i] = (float)idata[i] / 255.0f;
 		}
-		stbi_image_free(idata);
+		delete[] idata;
 	}
 }
 
