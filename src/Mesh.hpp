@@ -16,6 +16,7 @@ struct GPUMeshData
 	float* vertices;
 	float* uvs;
 	int* indices;
+	float* normals;
 
 	int triangleCount;
 
@@ -39,11 +40,13 @@ public:
 			cudaVertices = uploadToGPU(cudaVertices, this->vertices);
 			cudaUVCoords = uploadToGPU(cudaUVCoords, this->uvCoords);
 			cudaIndices  = uploadToGPU(cudaIndices, this->indices);
+			cudaNormals  = 0;
 
 			GPUMeshData meshData;
 			meshData.vertices = cudaVertices;
 			meshData.uvs = cudaUVCoords;
 			meshData.indices = cudaIndices;
+			meshData.normals = cudaNormals;
 
 			meshData.triangleCount = triangleCount;
 
@@ -53,8 +56,41 @@ public:
 			checkCudaErrors(cudaMalloc((void**)&gpuMeshData, sizeof(GPUMeshData)));
 			checkCudaErrors(cudaMemcpy(gpuMeshData, &meshData, sizeof(GPUMeshData), cudaMemcpyHostToDevice));
 		}
-
 	}
+
+	Mesh(std::vector<float>& vertices, std::vector<int>& indices, std::vector<float>& uvCoords, std::vector<float>& normals) : minBound(INFINITY), maxBound(-INFINITY)
+	{
+		this->vertices = vertices; 
+		this->indices = indices; 
+		this->uvCoords = uvCoords; 
+		this->normals = normals; 
+		this->triangleCount = indices.size() / 3; 
+		calcBounds(); 
+
+		if (availableGPU)
+		{
+			cudaVertices = uploadToGPU(cudaVertices, this->vertices); 
+			cudaUVCoords = uploadToGPU(cudaUVCoords, this->uvCoords); 
+			cudaIndices = uploadToGPU(cudaIndices, this->indices); 
+			cudaNormals = uploadToGPU(cudaNormals, this->normals); 
+
+			GPUMeshData meshData; 
+			meshData.vertices = cudaVertices; 
+			meshData.uvs = cudaUVCoords; 
+			meshData.indices = cudaIndices; 
+			meshData.normals = cudaNormals; 
+
+			meshData.triangleCount = triangleCount; 
+
+			meshData.minBounds = make_float3(minBound.x, minBound.y, minBound.z); 
+			meshData.maxBounds = make_float3(maxBound.x, maxBound.y, maxBound.z); 
+
+			checkCudaErrors(cudaMalloc((void**)&gpuMeshData, sizeof(GPUMeshData))); 
+			checkCudaErrors(cudaMemcpy(gpuMeshData, &meshData, sizeof(GPUMeshData), cudaMemcpyHostToDevice)); 
+		} 
+	}
+	
+
 
 	~Mesh()
 	{
@@ -82,10 +118,12 @@ private:
 	std::vector<float>	vertices;
 	std::vector<float>  uvCoords;
 	std::vector<int>	indices;
+	std::vector<float>  normals;
 
 	float* cudaVertices = 0;
 	float* cudaUVCoords = 0;
 	int* cudaIndices = 0;
+	float* cudaNormals = 0;
 
 	GPUMeshData* gpuMeshData;
 

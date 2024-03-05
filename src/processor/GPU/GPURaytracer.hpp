@@ -62,7 +62,6 @@ struct GPUTriangleHit
 	float3 barycentricCoords;
 };
 
-
 struct GPURay
 {
 	float4	origin;
@@ -221,6 +220,10 @@ __device__ __forceinline__ float4 randomUnitVectorInHemisphere(unsigned int& see
 __device__ __forceinline__ float4 randomUnitVectorInCosineHemisphere(unsigned int& seed, const float4& normal);
 
 __device__ __forceinline__ float4 reflect(const float4& v, const float4& normal);
+
+__device__ __forceinline__ float smoothstep(const float edge0, const float edge1, float x);
+
+__device__ __forceinline__ float clamp(const float x, const float a, const float b);
 
 
 

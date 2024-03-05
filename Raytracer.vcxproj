@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -135,6 +135,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="include\glm\detail\glm.cpp" />
+    <ClCompile Include="src\CustomModel.hpp" />
     <ClCompile Include="src\glad.c" />
     <ClCompile Include="src\ImGui\imgui.cpp" />
     <ClCompile Include="src\ImGui\imgui_demo.cpp" />
@@ -418,6 +419,7 @@
     <ClInclude Include="src\Scene.hpp" />
     <ClInclude Include="src\Shader.hpp" />
     <ClInclude Include="src\Camera.hpp" />
+    <ClInclude Include="src\Sphere.hpp" />
     <ClInclude Include="src\stb_image.h" />
     <ClInclude Include="src\Window.hpp" />
   </ItemGroup>

@@ -1,13 +1,25 @@
 #include "GPURaytracer.hpp"
 
-float4 getSkyLight(const float4& direction, const float4& lightDirection, const float4& lightColor, const float4& skyColor) 
+// Credit https://github.com/SebLague/Ray-Tracing/blob/main/Assets/Scripts/Shaders/RayTracing.shader
+__device__ float4 getSkyLight(const float4& direction, const float4& lightDirection, const float4& lightColor, const float4& skyColor) 
 {
-	float dotProduct = dot(direction, lightDirection);
+	/*float dotProduct = dot(direction, lightDirection);
 	if (1.0f - dotProduct < 0.01f)
 		return lightColor;
 	else
-		return skyColor;
+		return skyColor;*/
+
+	// float skyGradientT = powf(smoothstep(0, 0.4, direction.y), 0.35);
+	// float groundToSkyT = smoothstep(-0.01, 0, direction.y);
+	// float3 skyGradient = lerp(SkyColourHorizon, SkyColourZenith, skyGradientT);
+	float sun = powf(max(0.0f, dot(direction, lightDirection)), 500) * lightColor.w;
+	
+	return make_float4(skyColor.x * skyColor.w + lightColor.x * sun,
+					   skyColor.y * skyColor.w + lightColor.y * sun,
+		               skyColor.z * skyColor.w + lightColor.z * sun, 1.0f); 
 }
+
+
 
 void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera> camera, cudaSurfaceObject_t canvas)
 {
@@ -353,6 +365,7 @@ __device__ GPURayHit getIntersectionPoint(const GPURay& ray, const ObjectData& d
 	float* vertices = meshData->vertices;
 	float* uvCoords = meshData->uvs;
 	int* indices = meshData->indices;
+	float* normals = meshData->normals;
 	
 	int closestTriangle = -1;
 	GPUTriangleHit closestHit = {};
@@ -401,6 +414,17 @@ __device__ GPURayHit getIntersectionPoint(const GPURay& ray, const ObjectData& d
 	float4 v1 = make_float4(vertices[i1 + 0], vertices[i1 + 1], vertices[i1 + 2], 1.0f); 
 	float4 v2 = make_float4(vertices[i2 + 0], vertices[i2 + 1], vertices[i2 + 2], 1.0f); 
 
+
+	float4 n0;
+	float4 n1;
+	float4 n2;	
+	if (normals) 
+	{
+		n0 = make_float4(normals[i0 + 0], normals[i0 + 1], normals[i0 + 2], 0.0f);
+		n1 = make_float4(normals[i1 + 0], normals[i1 + 1], normals[i1 + 2], 0.0f);
+		n2 = make_float4(normals[i2 + 0], normals[i2 + 1], normals[i2 + 2], 0.0f);
+	}
+
 	v0 = matVecMul(modelMatrix, v0);
 	v1 = matVecMul(modelMatrix, v1);
 	v2 = matVecMul(modelMatrix, v2);
@@ -422,14 +446,34 @@ __device__ GPURayHit getIntersectionPoint(const GPURay& ray, const ObjectData& d
 		0.0f
 	);
 	float4 bitangent = make_float4(
-		f * (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x),
-		f * (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y),
+		f * (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x), 
+		f * (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y), 
 		f * (-deltaUV2.x * edge1.z + deltaUV1.x * edge2.z), 
 		0.0f
 	);
 	tangent = normalize(tangent); 
-	bitangent = normalize(bitangent); 
-	float4 normal = normalize(cross(edge2, edge1));  
+	bitangent = normalize(bitangent);
+	float4 normal; 
+	if (normals)
+	{
+		normal = make_float4(
+			n0.x * closestHit.barycentricCoords.x + n1.x * closestHit.barycentricCoords.y + n2.x * closestHit.barycentricCoords.z,
+			n0.y * closestHit.barycentricCoords.x + n1.y * closestHit.barycentricCoords.y + n2.y * closestHit.barycentricCoords.z,
+			n0.z * closestHit.barycentricCoords.x + n1.z * closestHit.barycentricCoords.y + n2.z * closestHit.barycentricCoords.z,
+			0.0f);
+		// Gram-Schmidt orthogonalize
+		{
+			float correction = dot(tangent, normal);
+			tangent = normalize(make_float4(
+				tangent.x - correction * normal.x,
+				tangent.y - correction * normal.y,
+				tangent.z - correction * normal.z,
+				0.0f));
+			bitangent = normalize(cross(normal, tangent));
+		}
+	}
+	else
+		normal = normalize(cross(edge2, edge1));  
 
 	mat3 tbnMatrix = {};
 	tbnMatrix.c0 = make_float3(tangent.x, tangent.y, tangent.z);   
@@ -472,26 +516,25 @@ __device__ GPUTriangleHit distToTriangle(const GPURay& ray, const float4& v0, co
 	float absDirx = fabsf(ray.direction.x);
 	float absDiry = fabsf(ray.direction.y);
 	float absDirz = fabsf(ray.direction.z);
-	int kz = absDirx > absDiry ? (absDirx > absDirz ? 0 : 2) : (absDiry > absDirz ? 1 : 2);
-	int kx = kz == 2 ? 0 : kz + 1;
-	int ky = kx == 2 ? 0 : kx + 1;
+	int kz = absDirx > absDiry ? (absDirx > absDirz ? 0 : 2) : (absDiry > absDirz ? 1 : 2); 
+	int kx = kz == 2 ? 0 : kz + 1; 
+	int ky = kx == 2 ? 0 : kx + 1; 
 
 	d = make_float3(((float*) &d)[kx], ((float*)&d)[ky], ((float*)&d)[kz]); 
 	v0t = make_float3(((float*) &v0t)[kx], ((float*)&v0t)[ky], ((float*)&v0t)[kz]); 
 	v1t = make_float3(((float*)&v1t)[kx], ((float*)&v1t)[ky], ((float*)&v1t)[kz]);
 	v2t = make_float3(((float*)&v2t)[kx], ((float*)&v2t)[ky], ((float*)&v2t)[kz]); 
-	
 
 	float sz = 1.f / d.z; 
-	float sx = -d.x * sz;
-	float sy = -d.y * sz;
+	float sx = -d.x * sz; 
+	float sy = -d.y * sz; 
 
 	v0t.x += sx * v0t.z; 
 	v0t.y += sy * v0t.z; 
 	v1t.x += sx * v1t.z; 
 	v1t.y += sy * v1t.z; 
 	v2t.x += sx * v2t.z; 
-	v2t.y += sy * v2t.z;
+	v2t.y += sy * v2t.z; 
 
 	float e0 = v1t.x * v2t.y - v1t.y * v2t.x; 
 	float e1 = v2t.x * v0t.y - v2t.y * v0t.x; 
@@ -499,11 +542,11 @@ __device__ GPUTriangleHit distToTriangle(const GPURay& ray, const float4& v0, co
 
 	if (e0 == 0.0f || e1 == 0.0f || e2 == 0.0f)
 	{
-		double p2txp1ty = (double)v2t.x * (double)v1t.y;
-		double p2typ1tx = (double)v2t.y * (double)v1t.x;
-		e0 = (float)(p2typ1tx - p2txp1ty);
-		double p0txp2ty = (double)v0t.x * (double)v2t.y;
-		double p0typ2tx = (double)v0t.y * (double)v2t.x;
+		double p2txp1ty = (double)v2t.x * (double)v1t.y; 
+		double p2typ1tx = (double)v2t.y * (double)v1t.x; 
+		e0 = (float)(p2typ1tx - p2txp1ty); 
+		double p0txp2ty = (double)v0t.x * (double)v2t.y; 
+		double p0typ2tx = (double)v0t.y * (double)v2t.x; 
 		e1 = (float)(p0typ2tx - p0txp2ty);
 		double p1txp0ty = (double)v1t.x * (double)v0t.y;
 		double p1typ0tx = (double)v1t.y * (double)v0t.x;
@@ -746,5 +789,18 @@ __device__ __forceinline__ float4 reflect(const float4& v, const float4& normal)
 	);
 	output = normalize(output);
 	return output;
+}
+
+__device__ __forceinline__ float smoothstep(const float edge0, const float edge1, float x)
+{
+	// Scale, and clamp x to 0..1 range
+	x = clamp((x - edge0) / (edge1 - edge0), 0.0f, 1.0f); 
+
+	return x * x * (3.0f - 2.0f * x);
+}
+
+__device__ __forceinline__ float clamp(const float x, const float a, const float b)
+{
+	return fminf(fmaxf(x, a), b);
 }
 

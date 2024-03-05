@@ -231,12 +231,19 @@ void Window::renderLoop()
     Material mat4("halfsmoothmetal", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), 0.5f, 1.0f);
     Material mat5("roughhalfmetal", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0.5f);
     Material mat6("halfsmoothdielectric", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), 0.5f, 0.0f);
-    Material mat7("pbrmat");
+    Material mat7("pbrmetal");
+    Material mat8("pbrbrick");
 
     mat7.setAlbedoTexture("res/metalmaterial/Metal046B_1K-PNG_Color.png");
     mat7.setNormalTexture("res/metalmaterial/Metal046B_1K-PNG_NormalGL.png");
     mat7.setMetalTexture("res/metalmaterial/Metal046B_1K-PNG_Metalness.png");
     mat7.setRoughnessTexture("res/metalmaterial/Metal046B_1K-PNG_Roughness.png");
+
+    mat8.setAlbedoTexture("res/modern-brick1_bl/modern-brick1_albedo.png");
+    mat8.setNormalTexture("res/modern-brick1_bl/modern-brick1_normal-ogl.png");
+    mat8.setMetalTexture("res/modern-brick1_bl/modern-brick1_metallic.png");
+    mat8.setRoughnessTexture("res/modern-brick1_bl/modern-brick1_roughness.png");
+    mat8.setAmbientOcclusionTexture("res/modern-brick1_bl/modern-brick1_ambient-occlusion.png");
 
     mat1.sendToGPU();
     mat2.sendToGPU();
@@ -245,6 +252,7 @@ void Window::renderLoop()
     mat5.sendToGPU();
     mat6.sendToGPU();
     mat7.sendToGPU();
+    mat8.sendToGPU();
 
     Cube cube(glm::vec3(0.0f, -1.0f, 0.0f), glm::quat(), glm::vec3(100.0f, 1.0f, 100.0f));
     scene->addToScene("cube", &cube);
@@ -252,9 +260,9 @@ void Window::renderLoop()
 
     Cube cube2(glm::vec3(0.0f, 2.0f, 0.0f));
     scene->addToScene("cube2", &cube2);
-    cube2.setMaterialName("lightmat");
+    cube2.setMaterialName("lightmat");*
 
-    Cube cube3(glm::vec3(-1.5f, 0.0f, -1.5f)); 
+    Cube cube3(glm::vec3(-1.5f, 0.0f, -1.5f));  
     scene->addToScene("cube3", &cube3); 
     cube3.setMaterialName("smoothhalfmetal"); 
 
@@ -270,10 +278,9 @@ void Window::renderLoop()
     scene->addToScene("cube6", &cube6);
     cube6.setMaterialName("halfsmoothdielectric");
 
-    Cube cube7(glm::vec3(0.0f, 4.0f, 0.0f));
-    scene->addToScene("cube7", &cube7);
-	cube7.setMaterialName("pbrmat");
-    
+    Sphere sphere(glm::vec3(0.0f, 4.0f, 0.0f)); 
+    scene->addToScene("sphere", &sphere); 
+    sphere.setMaterialName("pbrbrick"); 
     ImGuiIO& io = ImGui::GetIO();
 
     while (!glfwWindowShouldClose(glfwWindow))
