@@ -142,7 +142,7 @@ Window::Window(int width, int height, const char* name)
 
     // Heap allocate objects
     {
-        screenShader = std::make_unique<Shader>("src/shaders/vert.shader", "src/shaders/frag.shader");
+        screenShader = std::make_unique<Shader>("C:/Users/ec201/OneDrive/Desktop/raytracer/src/shaders/vert.shader", "C:/Users/ec201/OneDrive/Desktop/raytracer/src/shaders/frag.shader");
         camera = std::make_shared<Camera>(CAMERA_START_POS, glm::quat(), CAMERA_START_FOV, CAMERA_START_EXPOSURE);
         scene = std::make_shared<Scene>();
 
@@ -245,6 +245,8 @@ void Window::renderLoop()
     mat8.setRoughnessTexture("res/modern-brick1_bl/modern-brick1_roughness.png");
     mat8.setAmbientOcclusionTexture("res/modern-brick1_bl/modern-brick1_ambient-occlusion.png");
 
+    
+
     mat1.sendToGPU();
     mat2.sendToGPU();
     mat3.sendToGPU();
@@ -253,6 +255,7 @@ void Window::renderLoop()
     mat6.sendToGPU();
     mat7.sendToGPU();
     mat8.sendToGPU();
+   
 
     Cube cube(glm::vec3(0.0f, -1.0f, 0.0f), glm::quat(), glm::vec3(100.0f, 1.0f, 100.0f));
     scene->addToScene("cube", &cube);
@@ -260,7 +263,7 @@ void Window::renderLoop()
 
     Cube cube2(glm::vec3(0.0f, 2.0f, 0.0f));
     scene->addToScene("cube2", &cube2);
-    cube2.setMaterialName("lightmat");*
+    cube2.setMaterialName("lightmat");
 
     Cube cube3(glm::vec3(-1.5f, 0.0f, -1.5f));  
     scene->addToScene("cube3", &cube3); 
@@ -280,7 +283,7 @@ void Window::renderLoop()
 
     Sphere sphere(glm::vec3(0.0f, 4.0f, 0.0f)); 
     scene->addToScene("sphere", &sphere); 
-    sphere.setMaterialName("pbrbrick"); 
+    sphere.setMaterialName("pbrbrick");
     ImGuiIO& io = ImGui::GetIO();
 
     while (!glfwWindowShouldClose(glfwWindow))

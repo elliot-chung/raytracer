@@ -58,6 +58,7 @@ protected:
 	Mesh* mesh = 0;
 	std::string materialName = "";
 
+	// This should removed 
 	void setBounds() {
 		glm::mat4 model = getModelMatrix();
 		minBound = model * glm::vec4(mesh->getMinBound(), 1.0f);

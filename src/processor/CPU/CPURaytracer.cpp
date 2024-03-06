@@ -91,7 +91,6 @@ bool CPURaytracer::intersectsBoundingBox(const Ray& ray, const glm::vec3& minBou
 
 		float dmin = (bmin - ray.origin[d]) * dirInv[d];
 		float dmax = (bmax - ray.origin[d]) * dirInv[d];
-
 		tmin = max(dmin, tmin);
 		tmax = min(dmax, tmax);
 	}

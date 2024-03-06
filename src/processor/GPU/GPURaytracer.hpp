@@ -164,11 +164,11 @@ __device__ GPURay setupRay(const CameraParams& camera, const int x, const int y,
 
 __device__ float4 trace(GPURay& ray, const ObjectDataVector& objectDataVector, SkyLightParams skylight, const float aoIntensity, unsigned int& seed, const bool debug, DebugInfo* debugInfo);
 
-__device__ GPURayHit getIntersectionPoint(const GPURay& ray, const ObjectDataVector& dataVector);
+__device__ GPURayHit getIntersectionPoint(GPURay& ray, const ObjectDataVector& dataVector);
 
 __device__ GPUMaterialPositionData getMaterialData(const GPURayHit& hit);
 
-__device__ bool intersectsBoundingBox(const GPURay& ray, const float3& minBound, const float3& maxBound);
+__device__ bool intersectsBoundingBox(const GPURay& ray, const ObjectData& data); 
 
 __device__ GPURayHit getIntersectionPoint(const GPURay& ray, const ObjectData& data);
 

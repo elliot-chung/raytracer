@@ -318,27 +318,71 @@ __device__ float4 trace(GPURay& ray, const ObjectDataVector& objectDataVector, S
 	return outgoingLight;
 }
 
-__device__ GPURayHit getIntersectionPoint(const GPURay& ray, const ObjectDataVector& dataVector)
+__device__ GPURayHit getIntersectionPoint(GPURay& ray, const ObjectDataVector& dataVector)
 {
 	GPURayHit closestHit = {};
 	closestHit.distance = FLT_MAX;
 	for (int i = 0; i < dataVector.size; i++)
 	{
 		ObjectData data = dataVector.data[i];
-		if (!intersectsBoundingBox(ray, data.mesh->minBounds, data.mesh->maxBounds)) continue;
+		if (!intersectsBoundingBox(ray, data)) continue;
 		GPURayHit hp = getIntersectionPoint(ray, data);
 		if (hp.didHit && hp.distance < closestHit.distance)
 		{
 			closestHit = hp;
 			closestHit.objectDataIndex = i;
+
+			ray.maxDistance = hp.distance;
 		}
 	}
 	return closestHit;
 }
 
-__device__ bool intersectsBoundingBox(const GPURay& ray, const float3& minBound, const float3& maxBound)
+__device__ bool intersectsBoundingBox(const GPURay& ray, const ObjectData& data) 
 {
-	return true;
+	float tmin = 0.0f;
+	float tmax = ray.maxDistance;
+
+	float4 minBound = make_float4(data.mesh->minBounds.x, data.mesh->minBounds.y, data.mesh->minBounds.z, 1.0f);
+	float4 maxBound = make_float4(data.mesh->maxBounds.x, data.mesh->maxBounds.y, data.mesh->maxBounds.z, 1.0f);
+
+	minBound = matVecMul(data.modelMatrix, minBound);
+	maxBound = matVecMul(data.modelMatrix, maxBound);
+
+	float3 dirInv = make_float3(1.0f / ray.direction.x, 1.0f / ray.direction.y, 1.0f / ray.direction.z); 
+
+	bool sign = signbit(ray.direction.x); 
+	float bmin = sign ? maxBound.x : minBound.x; 
+	float bmax = sign ? minBound.x : maxBound.x; 
+
+	float dmin = (bmin - ray.origin.x) * dirInv.x; 
+	float dmax = (bmax - ray.origin.x) * dirInv.x; 
+
+	tmin = max(dmin, tmin);  
+	tmax = min(dmax, tmax);  
+	 
+	sign = signbit(ray.direction.y); 
+	bmin = sign ? maxBound.y : minBound.y; 
+	bmax = sign ? minBound.y : maxBound.y; 
+
+	dmin = (bmin - ray.origin.y) * dirInv.y; 
+	dmax = (bmax - ray.origin.y) * dirInv.y;  
+
+	tmin = max(dmin, tmin); 
+	tmax = min(dmax, tmax);  
+
+	sign = signbit(ray.direction.z); 
+	bmin = sign ? maxBound.z : minBound.z; 
+	bmax = sign ? minBound.z : maxBound.z;  
+
+	dmin = (bmin - ray.origin.z) * dirInv.z;  
+	dmax = (bmax - ray.origin.z) * dirInv.z;  
+	 
+	tmin = max(dmin, tmin);  
+	tmax = min(dmax, tmax);  
+
+	return tmin < tmax;
+
 }
 
 __device__  GPUMaterialPositionData getMaterialData(const GPURayHit& hit)
