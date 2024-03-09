@@ -43,9 +43,8 @@ public:
 	inline Mesh* getMesh() { return mesh; }
 	inline Material* getMaterial() { return material; }
 	inline GPUMaterial* getGPUMaterial() { return material->getGPUMaterial(); }
-	inline std::string getMaterialName() { return materialName; }
 
-	inline void setMaterialName(std::string name) { materialName = name; material = Material::getMaterial(name); }
+	inline void setMaterialName(std::string name) { material = Material::getMaterial(name); }
 protected:
 
 	glm::vec3 Position;
@@ -54,5 +53,4 @@ protected:
 
 	Mesh* mesh = 0;
 	Material* material = 0;
-	std::string materialName = "";
 };

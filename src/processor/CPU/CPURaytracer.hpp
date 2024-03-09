@@ -12,7 +12,7 @@ struct RayHit
 	float distance;
 	glm::vec2 uv;
 
-	std::string material;
+	Material* material;
 
 	glm::mat3 tbnMatrix;
 

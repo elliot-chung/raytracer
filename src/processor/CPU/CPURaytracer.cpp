@@ -59,7 +59,7 @@ Color CPURaytracer::singleTrace(Ray& ray, const Scene::ObjectMap& objects)
 		if (!ray.didHit) break;
 
 		// Set material data using closest hit object
-		Material* material = Material::getMaterial(ray.hitInfo.material);
+		Material* material = ray.hitInfo.material;
 		setMaterialData(ray, material);
 
 		if (i == 0)
@@ -187,7 +187,7 @@ void CPURaytracer::getIntersectionPoint(Ray& ray, DisplayObject* object)
 	ray.hitInfo.hitPosition = interpPosition;
 	ray.hitInfo.distance = minDistance;
 	ray.hitInfo.uv = interpUVCoords;
-	ray.hitInfo.material = object->getMaterialName();
+	ray.hitInfo.material = object->getMaterial();
 	ray.hitInfo.tbnMatrix = tbnMatrix;
 }
 
