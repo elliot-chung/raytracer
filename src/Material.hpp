@@ -104,6 +104,8 @@ public:
 	inline static Material* getMaterial(std::string& name) { return materialMap[name]; }
 	inline static GPUMaterial* getGPUMaterial(std::string& name) { return materialMap[name]->gpuMaterial; }
 
+	inline GPUMaterial* getGPUMaterial() { return gpuMaterial; }
+
 private:
 	const glm::vec3 NORMAL = glm::vec3(0.0f, 0.0f, 1.0f);
 	const glm::vec3 AO	   = glm::vec3(1.0f);

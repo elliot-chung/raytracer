@@ -66,7 +66,7 @@ void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera
 
 		mat4transfer(data.modelMatrix, obj->getModelMatrix());
 		data.mesh = obj->getMesh()->getGPUMeshData();
-		data.material = Material::getGPUMaterial(obj->getMaterialName());
+		data.material = obj->getGPUMaterial();
 		objectDataArray[i++] = data;
 	}
 	ObjectData* objectDataArrayDev;

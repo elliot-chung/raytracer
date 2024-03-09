@@ -6,6 +6,7 @@
 #include "ImGui/imgui.h"
 
 #include "Mesh.hpp"
+#include "Material.hpp"
 
 const glm::vec3 DEFAULT_POSITION = glm::vec3(0.0f);
 const glm::quat DEFAULT_ROTATION = glm::quat();
@@ -38,11 +39,13 @@ public:
 	inline void setPosition(glm::vec3 position)		{ Position = position; }
 	inline void setRotation(glm::quat rotation)		{ Rotation = rotation; }
 	inline void setScale(glm::vec3 scale)			{ Scale = scale; }
-	inline void setMaterialName(std::string name)	{ materialName = name; }
 
 	inline Mesh* getMesh() { return mesh; }
+	inline Material* getMaterial() { return material; }
+	inline GPUMaterial* getGPUMaterial() { return material->getGPUMaterial(); }
 	inline std::string getMaterialName() { return materialName; }
-	inline void setMaterialName(std::string& name) { materialName = name; } 
+
+	inline void setMaterialName(std::string name) { materialName = name; material = Material::getMaterial(name); }
 protected:
 
 	glm::vec3 Position;
@@ -50,5 +53,6 @@ protected:
 	glm::vec3 Scale;
 
 	Mesh* mesh = 0;
+	Material* material = 0;
 	std::string materialName = "";
 };
