@@ -48,7 +48,9 @@ Color CPURaytracer::singleTrace(Ray& ray, const Scene::ObjectMap& objects)
 		for (auto objPair : objects)
 		{
 			DisplayObject* object = objPair.second;
-			if (!intersectsBoundingBox(ray, object->getMinBound(), object->getMaxBound())) continue; // Skip if ray doesn't intersect BB
+			glm::mat4 modelMatrix = object->getModelMatrix();
+			if (!intersectsBoundingBox(ray, modelMatrix * glm::vec4(object->getMesh()->getMinBound(), 1.0f), 
+											modelMatrix * glm::vec4(object->getMesh()->getMaxBound(), 1.0f))) continue; // Skip if ray doesn't intersect BB
 			getIntersectionPoint(ray, object);
 		}
 

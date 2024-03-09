@@ -14,7 +14,7 @@ const glm::vec3 DEFAULT_SCALE = glm::vec3(1.0f);
 class DisplayObject
 {
 public:
-	DisplayObject(glm::vec3 position = DEFAULT_POSITION, glm::quat rotation = DEFAULT_ROTATION, glm::vec3 scale = DEFAULT_SCALE) : minBound(0.0f), maxBound(0.0f)
+	DisplayObject(glm::vec3 position = DEFAULT_POSITION, glm::quat rotation = DEFAULT_ROTATION, glm::vec3 scale = DEFAULT_SCALE)
 	{
 		Position = position;
 		Rotation = rotation;
@@ -35,13 +35,10 @@ public:
 	virtual void update(ImGuiIO& io) {}
 	virtual void updateGUI(ImGuiIO& io) {}
 
-	inline void setPosition(glm::vec3 position)		{ Position = position; setBounds(); }
-	inline void setRotation(glm::quat rotation)		{ Rotation = rotation; setBounds(); }
-	inline void setScale(glm::vec3 scale)			{ Scale = scale; setBounds(); }
+	inline void setPosition(glm::vec3 position)		{ Position = position; }
+	inline void setRotation(glm::quat rotation)		{ Rotation = rotation; }
+	inline void setScale(glm::vec3 scale)			{ Scale = scale; }
 	inline void setMaterialName(std::string name)	{ materialName = name; }
-
-	inline glm::vec3 getMinBound() { return minBound; }
-	inline glm::vec3 getMaxBound() { return maxBound; }
 
 	inline Mesh* getMesh() { return mesh; }
 	inline std::string getMaterialName() { return materialName; }
@@ -52,16 +49,6 @@ protected:
 	glm::quat Rotation;
 	glm::vec3 Scale;
 
-	glm::vec3 minBound;	// In world coordinates
-	glm::vec3 maxBound;
-
 	Mesh* mesh = 0;
 	std::string materialName = "";
-
-	// This should removed 
-	void setBounds() {
-		glm::mat4 model = getModelMatrix();
-		minBound = model * glm::vec4(mesh->getMinBound(), 1.0f);
-		maxBound = model * glm::vec4(mesh->getMaxBound(), 1.0f);
-	}
 };

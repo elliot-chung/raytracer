@@ -112,6 +112,5 @@ public:
 
 		static Mesh sMesh(vertices, indices, uvCoords);
 		mesh = &sMesh;
-		setBounds();
 	}
 };

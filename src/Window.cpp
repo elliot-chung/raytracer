@@ -285,7 +285,7 @@ void Window::renderLoop()
     scene->addToScene("sphere", &sphere); 
     sphere.setMaterialName("pbrbrick");*/
 
-    for (int i = 0; i < 100; i++)
+    for (int i = 0; i < 1; i++)
     {
         float x = (rand() % 1000) / 10.0f - 50.0f;
 		float z = (rand() % 1000) / 10.0f - 50.0f;
