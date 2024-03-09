@@ -6,8 +6,8 @@
 class Scene
 {
 public:
-	typedef std::unordered_map<const char*, DisplayObject*> ObjectMap;
-	bool addToScene(const char* name, DisplayObject* object)
+	typedef std::unordered_map<std::string, DisplayObject*> ObjectMap;
+	bool addToScene(std::string name, DisplayObject* object)
 	{
 		if (objectMap.find(name) == objectMap.end())
 		{

@@ -265,7 +265,7 @@ void Window::renderLoop()
     scene->addToScene("cube2", &cube2);
     cube2.setMaterialName("lightmat");
 
-    Cube cube3(glm::vec3(-1.5f, 0.0f, -1.5f));  
+    /*Cube cube3(glm::vec3(-1.5f, 0.0f, -1.5f));  
     scene->addToScene("cube3", &cube3); 
     cube3.setMaterialName("smoothhalfmetal"); 
 
@@ -283,7 +283,19 @@ void Window::renderLoop()
 
     Sphere sphere(glm::vec3(0.0f, 4.0f, 0.0f)); 
     scene->addToScene("sphere", &sphere); 
-    sphere.setMaterialName("pbrbrick");
+    sphere.setMaterialName("pbrbrick");*/
+
+    for (int i = 0; i < 100; i++)
+    {
+        float x = (rand() % 1000) / 10.0f - 50.0f;
+		float z = (rand() % 1000) / 10.0f - 50.0f;
+		Sphere* sphere = new Sphere(glm::vec3(x, 0.0f, z));
+        std::string name = "sphere" + std::to_string(i);
+		scene->addToScene(name, sphere);
+		sphere->setMaterialName("halfsmoothmetal");
+    }
+
+
     ImGuiIO& io = ImGui::GetIO();
 
     while (!glfwWindowShouldClose(glfwWindow))

@@ -12,7 +12,7 @@ __device__ float4 getSkyLight(const float4& direction, const float4& lightDirect
 	// float skyGradientT = powf(smoothstep(0, 0.4, direction.y), 0.35);
 	// float groundToSkyT = smoothstep(-0.01, 0, direction.y);
 	// float3 skyGradient = lerp(SkyColourHorizon, SkyColourZenith, skyGradientT);
-	float sun = powf(max(0.0f, dot(direction, lightDirection)), 500) * lightColor.w;
+	float sun = powf(max(0.0f, dot(direction, lightDirection)), 1000) * lightColor.w;
 	
 	return make_float4(skyColor.x * skyColor.w + lightColor.x * sun,
 					   skyColor.y * skyColor.w + lightColor.y * sun,
@@ -54,7 +54,7 @@ void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera
 	skyLightSettings.lightColor = lightColor;
 	skyLightSettings.skyColor = skyColor;
 
-
+	// -----------------------------
 	// Transfer Scene Data to GPU
 	Scene::ObjectMap objects = scene->getObjects();
 	ObjectData* objectDataArray = new ObjectData[objects.size()];
@@ -76,6 +76,10 @@ void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera
 	ObjectDataVector objectDataVector = {};
 	objectDataVector.data = objectDataArrayDev;
 	objectDataVector.size = objects.size();
+
+	delete[] objectDataArray;
+	// (This block of code should be moved to the Scene class, remember to move the cudaFree call as well)
+	// ----------------------------
 
 	// Create Debug Output
 	DebugInfo* debugInfo = nullptr;
@@ -122,7 +126,6 @@ void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera
 
 	checkCudaErrors(cudaFree(objectDataArrayDev));
 	if (debug) checkCudaErrors(cudaFree(debugInfo));
-	delete[] objectDataArray;
 }
 
 
