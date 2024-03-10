@@ -7,6 +7,7 @@
 #include "device_launch_parameters.h"
 
 #include "../Raytracer.hpp"
+#include "../../linal.hpp"
 
 #ifdef __INTELLISENSE__
 template<class T>
@@ -17,20 +18,6 @@ void surf2Dwrite(T data, cudaSurfaceObject_t surfObj, int x, int y,
 #define BLOCK_SIZE 8
 #define MAXIMUM_AA 4
 
-struct mat4
-{
-	float4 c0;
-	float4 c1;
-	float4 c2;
-	float4 c3;
-};
-
-struct mat3
-{
-	float3 c0;
-	float3 c1;
-	float3 c2;
-};
 
 struct GPURayHit
 {
@@ -70,24 +57,9 @@ struct GPURay
 	float	maxDistance;
 };
 
-struct ObjectData
-{
-	mat4 modelMatrix;
-
-	float3 minCompositeBounds;
-	float3 maxCompositeBounds;
-
-	GPUMeshData** meshes;
-	int* materialIndices;
-	GPUMaterial** materials;
-	int meshCount;
-
-	bool isComposite;
-};
-
 struct ObjectDataVector
 {
-	ObjectData* data;
+	GPUObjectData* data;
 	int size;
 };
 
@@ -137,22 +109,6 @@ struct DebugInfo
 	float secondDistance;
 };
 
-#define vec3transfer(a, b) \
-	a.x = b.x; \
-	a.y = b.y; \
-	a.z = b.z;
-
-#define vec4transfer(a, b) \
-	a.x = b.x; \
-	a.y = b.y; \
-	a.z = b.z; \
-	a.w = b.w;
-
-#define mat4transfer(a, b) \
-	vec4transfer(a.c0, b[0]); \
-	vec4transfer(a.c1, b[1]); \
-	vec4transfer(a.c2, b[2]); \
-	vec4transfer(a.c3, b[3]);
 
 class GPURaytracer : public Raytracer
 {
@@ -176,11 +132,11 @@ __device__ GPURayHit getIntersectionPoint(GPURay& ray, const ObjectDataVector& d
 
 __device__ GPUMaterialPositionData getMaterialData(const GPURayHit& hit);
 
-__device__ bool intersectsObjectBoundingBox(const GPURay& ray, const ObjectData& data); 
+__device__ bool intersectsObjectBoundingBox(const GPURay& ray, const GPUObjectData& data); 
 
 __device__ bool intersectsMeshBoundingBox(const GPURay& ray, const float3& minBounds, const float3& maxBounds, mat4 modelMatrix);
 
-__device__ GPURayHit getIntersectionPoint(const GPURay& ray, const ObjectData& data);
+__device__ GPURayHit getIntersectionPoint(const GPURay& ray, const GPUObjectData& data);
 
 __device__ GPUTriangleHit distToTriangle(const GPURay& ray, const float4& v0, const float4& v1, const float4& v2);
 

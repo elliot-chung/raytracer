@@ -57,6 +57,9 @@
     <ClCompile Include="src\CustomModel.hpp">
       <Filter>Header Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\linal.hpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Shader.hpp">

@@ -7,10 +7,37 @@
 
 #include "Mesh.hpp"
 #include "Material.hpp"
+#include "linal.hpp"
 
 const glm::vec3 DEFAULT_POSITION = glm::vec3(0.0f);
 const glm::quat DEFAULT_ROTATION = glm::quat();
 const glm::vec3 DEFAULT_SCALE = glm::vec3(1.0f);
+
+struct LLGPUObjectData // Long Lifespan GPU Object Data
+{
+	GPUMeshData** meshes; 
+	int* materialIndices; 
+	GPUMaterial** materials; 
+	int meshCount; 
+
+	bool isComposite;
+};
+
+struct GPUObjectData
+{
+	mat4 modelMatrix;
+
+	float3 minCompositeBounds;
+	float3 maxCompositeBounds;
+
+	GPUMeshData** meshes; 
+	int* materialIndices; 
+	GPUMaterial** materials; 
+	int meshCount;
+
+	bool isComposite;
+};
+
 
 class DisplayObject
 {
@@ -72,6 +99,13 @@ protected:
 
 	void updateCompositeBounds()
 	{
+		if (!isComposite)
+		{
+			compositeMaxBounds = meshes[0].first->getMaxBound(); 
+			compositeMinBounds = meshes[0].first->getMinBound(); 
+			return;
+		}
+
 		compositeMaxBounds = make_float3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
 		compositeMinBounds = make_float3(FLT_MAX, FLT_MAX, FLT_MAX);
 
@@ -89,5 +123,10 @@ protected:
 			compositeMinBounds = make_float3(fminf(minBounds.x, compositeMinBounds.x), fminf(minBounds.y, compositeMinBounds.y), fminf(minBounds.z, compositeMinBounds.z));
 			
 		}
+	}
+
+	void sendToGPU()
+	{
+		
 	}
 };

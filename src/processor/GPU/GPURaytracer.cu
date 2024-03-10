@@ -57,12 +57,12 @@ void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera
 	// -----------------------------
 	// Transfer Scene Data to GPU
 	Scene::ObjectMap objects = scene->getObjects();
-	ObjectData* objectDataArray = new ObjectData[objects.size()];
+	GPUObjectData* objectDataArray = new GPUObjectData[objects.size()]; 
 	int i = 0;
 	for (auto& objPair : objects)
 	{
 		DisplayObject* obj = objPair.second;
-		ObjectData data = {};
+		GPUObjectData data = {};
 		 
 		mat4transfer(data.modelMatrix, obj->getModelMatrix());
 		data.minCompositeBounds = obj->getMinBound();
@@ -101,9 +101,9 @@ void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera
 		data.isComposite = obj->isCompositeObject();
 		objectDataArray[i++] = data;
 	}
-	ObjectData* objectDataArrayDev;
-	checkCudaErrors(cudaMalloc((void**)&objectDataArrayDev, sizeof(ObjectData) * objects.size()));
-	checkCudaErrors(cudaMemcpy(objectDataArrayDev, objectDataArray, sizeof(ObjectData) * objects.size(), cudaMemcpyHostToDevice));
+	GPUObjectData* objectDataArrayDev;
+	checkCudaErrors(cudaMalloc((void**)&objectDataArrayDev, sizeof(GPUObjectData) * objects.size()));
+	checkCudaErrors(cudaMemcpy(objectDataArrayDev, objectDataArray, sizeof(GPUObjectData) * objects.size(), cudaMemcpyHostToDevice));
 
 	ObjectDataVector objectDataVector = {};
 	objectDataVector.data = objectDataArrayDev;
@@ -157,7 +157,7 @@ void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera
 	
 	for (int i = 0; i < objectDataVector.size; i++)
 	{
-		ObjectData data = objectDataArray[i];
+		GPUObjectData data = objectDataArray[i];
 		checkCudaErrors(cudaFree(data.meshes));
 		checkCudaErrors(cudaFree(data.materialIndices));
 		checkCudaErrors(cudaFree(data.materials));
@@ -366,7 +366,7 @@ __device__ GPURayHit getIntersectionPoint(GPURay& ray, const ObjectDataVector& d
 	closestHit.distance = FLT_MAX;
 	for (int i = 0; i < dataVector.size; i++)
 	{
-		ObjectData data = dataVector.data[i];
+		GPUObjectData data = dataVector.data[i];
 		if (!intersectsObjectBoundingBox(ray, data)) continue;
 		GPURayHit hp = getIntersectionPoint(ray, data);
 		if (hp.didHit && hp.distance < closestHit.distance)
@@ -380,7 +380,7 @@ __device__ GPURayHit getIntersectionPoint(GPURay& ray, const ObjectDataVector& d
 	return closestHit;
 }
 
-__device__ bool intersectsObjectBoundingBox(const GPURay& ray, const ObjectData& data) 
+__device__ bool intersectsObjectBoundingBox(const GPURay& ray, const GPUObjectData& data) 
 {
 	float tmin = 0.0f;
 	float tmax = ray.maxDistance;
@@ -490,7 +490,7 @@ __device__  GPUMaterialPositionData getMaterialData(const GPURayHit& hit)
 	return output;
 }
 
-__device__ GPURayHit getIntersectionPoint(const GPURay& ray, const ObjectData& data)
+__device__ GPURayHit getIntersectionPoint(const GPURay& ray, const GPUObjectData& data)
 {
 	mat4 modelMatrix = data.modelMatrix;
 

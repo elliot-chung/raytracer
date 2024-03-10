@@ -145,6 +145,7 @@
     <ClCompile Include="src\ImGui\imgui_widgets.cpp" />
     <ClCompile Include="src\lodepng.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\linal.hpp" />
     <ClCompile Include="src\processor\CPU\CPURaytracer.cpp" />
     <ClCompile Include="src\processor\CPU\CPURaytracer.hpp" />
     <ClCompile Include="src\Window.cpp" />

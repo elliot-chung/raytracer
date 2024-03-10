@@ -112,7 +112,6 @@ public:
 
 		static Mesh sMesh(vertices, indices, uvCoords);
 		meshes[0] = std::pair(&sMesh, 0);
-		compositeMaxBounds = sMesh.getMaxBound(); 
-		compositeMinBounds = sMesh.getMinBound(); 
+		updateCompositeBounds(); 
 	}
 };

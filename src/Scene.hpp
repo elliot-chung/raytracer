@@ -41,6 +41,10 @@ public:
 	
 	inline ObjectMap& getObjects() { return objectMap; }
 	
+	void sendToGPU()
+	{
+		
+	}
 private:
 	ObjectMap objectMap = {};
 };
