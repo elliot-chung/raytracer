@@ -73,8 +73,16 @@ struct GPURay
 struct ObjectData
 {
 	mat4 modelMatrix;
-	GPUMeshData* mesh;
-	GPUMaterial* material;
+
+	float3 minCompositeBounds;
+	float3 maxCompositeBounds;
+
+	GPUMeshData** meshes;
+	int* materialIndices;
+	GPUMaterial** materials;
+	int meshCount;
+
+	bool isComposite;
 };
 
 struct ObjectDataVector
@@ -168,7 +176,9 @@ __device__ GPURayHit getIntersectionPoint(GPURay& ray, const ObjectDataVector& d
 
 __device__ GPUMaterialPositionData getMaterialData(const GPURayHit& hit);
 
-__device__ bool intersectsBoundingBox(const GPURay& ray, const ObjectData& data); 
+__device__ bool intersectsObjectBoundingBox(const GPURay& ray, const ObjectData& data); 
+
+__device__ bool intersectsMeshBoundingBox(const GPURay& ray, const float3& minBounds, const float3& maxBounds, mat4 modelMatrix);
 
 __device__ GPURayHit getIntersectionPoint(const GPURay& ray, const ObjectData& data);
 

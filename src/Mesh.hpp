@@ -27,7 +27,7 @@ struct GPUMeshData
 class Mesh
 {
 public:
-	Mesh(std::vector<float>& vertices, std::vector<int>& indices, std::vector<float>& uvCoords) : minBound(INFINITY), maxBound(-INFINITY)
+	Mesh(std::vector<float>& vertices, std::vector<int>& indices, std::vector<float>& uvCoords)
 	{
 		this->vertices		= vertices;
 		this->indices	    = indices;
@@ -58,7 +58,7 @@ public:
 		}
 	}
 
-	Mesh(std::vector<float>& vertices, std::vector<int>& indices, std::vector<float>& uvCoords, std::vector<float>& normals) : minBound(INFINITY), maxBound(-INFINITY)
+	Mesh(std::vector<float>& vertices, std::vector<int>& indices, std::vector<float>& uvCoords, std::vector<float>& normals)
 	{
 		this->vertices = vertices; 
 		this->indices = indices; 
@@ -103,8 +103,8 @@ public:
 		}
 	}
 
-	inline glm::vec3 getMinBound() { return minBound; }
-	inline glm::vec3 getMaxBound() { return maxBound; }
+	inline float3 getMinBound() { return minBound; }
+	inline float3 getMaxBound() { return maxBound; }
 
 	inline std::vector<float> getVertices() { return vertices; }
 	inline std::vector<float> getUVCoords() { return uvCoords; }
@@ -127,8 +127,8 @@ private:
 
 	GPUMeshData* gpuMeshData;
 
-	glm::vec3 minBound; // In local coordinates
-	glm::vec3 maxBound; 
+	float3 minBound = make_float3(FLT_MAX, FLT_MAX, FLT_MAX); // In local coordinates
+	float3 maxBound = make_float3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
 
 	int triangleCount = 0;
 

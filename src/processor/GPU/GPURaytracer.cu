@@ -63,10 +63,42 @@ void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera
 	{
 		DisplayObject* obj = objPair.second;
 		ObjectData data = {};
-
+		 
 		mat4transfer(data.modelMatrix, obj->getModelMatrix());
-		data.mesh = obj->getMesh()->getGPUMeshData();
-		data.material = obj->getGPUMaterial();
+		data.minCompositeBounds = obj->getMinBound();
+		data.maxCompositeBounds = obj->getMaxBound(); 
+
+		auto meshes = obj->getMeshes();
+		auto materials = obj->getMaterials(); 
+		data.meshCount = meshes.size(); 
+
+		GPUMeshData** meshesHost = new GPUMeshData*[meshes.size()]; 
+		int* materialIndicesHost = new int[meshes.size()]; 
+		GPUMaterial** materialsHost = new GPUMaterial*[materials.size()];
+
+		for (int i = 0; i < meshes.size(); i++)
+		{
+			meshesHost[i] = meshes[i].first->getGPUMeshData(); 
+			materialIndicesHost[i] = meshes[i].second; 
+		}
+		for (int i = 0; i < materials.size(); i++)
+		{
+			materialsHost[i] = materials[i]->getGPUMaterial(); 
+		}
+
+		checkCudaErrors(cudaMalloc((void**)&data.meshes, sizeof(GPUMeshData*) * meshes.size()));
+		checkCudaErrors(cudaMalloc((void**)&data.materialIndices, sizeof(int) * meshes.size())); 
+		checkCudaErrors(cudaMalloc((void**)&data.materials, sizeof(GPUMaterial*) * materials.size()));
+
+		checkCudaErrors(cudaMemcpy(data.meshes, meshesHost, sizeof(GPUMeshData*) * meshes.size(), cudaMemcpyHostToDevice));
+	    checkCudaErrors(cudaMemcpy(data.materialIndices, materialIndicesHost, sizeof(int) * meshes.size(), cudaMemcpyHostToDevice));
+		checkCudaErrors(cudaMemcpy(data.materials, materialsHost, sizeof(GPUMaterial*) * materials.size(), cudaMemcpyHostToDevice));
+		
+		delete[] meshesHost;
+		delete[] materialIndicesHost;
+		delete[] materialsHost;
+
+		data.isComposite = obj->isCompositeObject();
 		objectDataArray[i++] = data;
 	}
 	ObjectData* objectDataArrayDev;
@@ -77,7 +109,7 @@ void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera
 	objectDataVector.data = objectDataArrayDev;
 	objectDataVector.size = objects.size();
 
-	delete[] objectDataArray;
+	
 	// (This block of code should be moved to the Scene class, remember to move the cudaFree call as well)
 	// ----------------------------
 
@@ -123,7 +155,14 @@ void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera
 	else 
 		progressiveFrameCount = 0;
 	
-
+	for (int i = 0; i < objectDataVector.size; i++)
+	{
+		ObjectData data = objectDataArray[i];
+		checkCudaErrors(cudaFree(data.meshes));
+		checkCudaErrors(cudaFree(data.materialIndices));
+		checkCudaErrors(cudaFree(data.materials));
+	}
+	delete[] objectDataArray; 
 	checkCudaErrors(cudaFree(objectDataArrayDev));
 	if (debug) checkCudaErrors(cudaFree(debugInfo));
 }
@@ -328,7 +367,7 @@ __device__ GPURayHit getIntersectionPoint(GPURay& ray, const ObjectDataVector& d
 	for (int i = 0; i < dataVector.size; i++)
 	{
 		ObjectData data = dataVector.data[i];
-		if (!intersectsBoundingBox(ray, data)) continue;
+		if (!intersectsObjectBoundingBox(ray, data)) continue;
 		GPURayHit hp = getIntersectionPoint(ray, data);
 		if (hp.didHit && hp.distance < closestHit.distance)
 		{
@@ -341,13 +380,13 @@ __device__ GPURayHit getIntersectionPoint(GPURay& ray, const ObjectDataVector& d
 	return closestHit;
 }
 
-__device__ bool intersectsBoundingBox(const GPURay& ray, const ObjectData& data) 
+__device__ bool intersectsObjectBoundingBox(const GPURay& ray, const ObjectData& data) 
 {
 	float tmin = 0.0f;
 	float tmax = ray.maxDistance;
 
-	float4 minBound = make_float4(data.mesh->minBounds.x, data.mesh->minBounds.y, data.mesh->minBounds.z, 1.0f);
-	float4 maxBound = make_float4(data.mesh->maxBounds.x, data.mesh->maxBounds.y, data.mesh->maxBounds.z, 1.0f);
+	float4 minBound = make_float4(data.minCompositeBounds.x, data.minCompositeBounds.y, data.minCompositeBounds.z, 1.0f);
+	float4 maxBound = make_float4(data.maxCompositeBounds.x, data.maxCompositeBounds.y, data.maxCompositeBounds.z, 1.0f);
 
 	minBound = matVecMul(data.modelMatrix, minBound);
 	maxBound = matVecMul(data.modelMatrix, maxBound);
@@ -388,6 +427,52 @@ __device__ bool intersectsBoundingBox(const GPURay& ray, const ObjectData& data)
 
 }
 
+__device__ bool intersectsMeshBoundingBox(const GPURay& ray, const float3& minBounds, const float3& maxBounds, mat4 modelMatrix)
+{
+	float tmin = 0.0f;
+	float tmax = ray.maxDistance;
+
+	float4 minBound = make_float4(minBounds.x, minBounds.y, minBounds.z, 1.0f);
+	float4 maxBound = make_float4(maxBounds.x, maxBounds.y, maxBounds.z, 1.0f);
+
+	minBound = matVecMul(modelMatrix, minBound);
+	maxBound = matVecMul(modelMatrix, maxBound);
+
+	float3 dirInv = make_float3(1.0f / ray.direction.x, 1.0f / ray.direction.y, 1.0f / ray.direction.z); 
+
+	bool sign = signbit(ray.direction.x); 
+	float bmin = sign ? maxBound.x : minBound.x; 
+	float bmax = sign ? minBound.x : maxBound.x; 
+
+	float dmin = (bmin - ray.origin.x) * dirInv.x; 
+	float dmax = (bmax - ray.origin.x) * dirInv.x; 
+
+	tmin = max(dmin, tmin);  
+	tmax = min(dmax, tmax);  
+	 
+	sign = signbit(ray.direction.y); 
+	bmin = sign ? maxBound.y : minBound.y; 
+	bmax = sign ? minBound.y : maxBound.y; 
+
+	dmin = (bmin - ray.origin.y) * dirInv.y; 
+	dmax = (bmax - ray.origin.y) * dirInv.y;  
+
+	tmin = max(dmin, tmin); 
+	tmax = min(dmax, tmax);  
+
+	sign = signbit(ray.direction.z); 
+	bmin = sign ? maxBound.z : minBound.z; 
+	bmax = sign ? minBound.z : maxBound.z;  
+
+	dmin = (bmin - ray.origin.z) * dirInv.z;  
+	dmax = (bmax - ray.origin.z) * dirInv.z;  
+	 
+	tmin = max(dmin, tmin);  
+	tmax = min(dmax, tmax);  
+
+	return tmin < tmax;
+}
+
 __device__  GPUMaterialPositionData getMaterialData(const GPURayHit& hit)
 {
 	GPUMaterialPositionData output = {};
@@ -408,42 +493,63 @@ __device__  GPUMaterialPositionData getMaterialData(const GPURayHit& hit)
 __device__ GPURayHit getIntersectionPoint(const GPURay& ray, const ObjectData& data)
 {
 	mat4 modelMatrix = data.modelMatrix;
-	GPUMeshData* meshData = data.mesh;
-	float* vertices = meshData->vertices;
-	float* uvCoords = meshData->uvs;
-	int* indices = meshData->indices;
-	float* normals = meshData->normals;
+
+	GPUMeshData* meshData;
+	float* vertices;
+	float* uvCoords;
+	int* indices;
+	float* normals;
+
+	GPUMeshData** meshes = data.meshes; 
+	int* materialIndices = data.materialIndices;
+	GPUMaterial** materials = data.materials; 
 	
+	int closestMeshIndex = -1;
 	int closestTriangle = -1;
 	GPUTriangleHit closestHit = {};
 	closestHit.distance = FLT_MAX;
 
-	for (int i = 0; i < meshData->triangleCount; i++)
+	for (int meshInd = 0; meshInd < data.meshCount; meshInd++)
 	{
-		int i0 = indices[i * 3 + 0] * 3;
-		int i1 = indices[i * 3 + 1] * 3;
-		int i2 = indices[i * 3 + 2] * 3;
+		meshData = meshes[meshInd];
+		vertices = meshData->vertices;
+		uvCoords = meshData->uvs;
+		indices  = meshData->indices;
 
-		float4 v0 = make_float4( vertices[i0 + 0], vertices[i0 + 1], vertices[i0 + 2], 1.0f);
-		float4 v1 = make_float4( vertices[i1 + 0], vertices[i1 + 1], vertices[i1 + 2], 1.0f);
-		float4 v2 = make_float4( vertices[i2 + 0], vertices[i2 + 1], vertices[i2 + 2], 1.0f);
-
-		v0 = matVecMul(modelMatrix, v0);
-		v1 = matVecMul(modelMatrix, v1);
-		v2 = matVecMul(modelMatrix, v2);
-
-		GPUTriangleHit triHit = distToTriangle(ray, v0, v1, v2);
-		if (triHit.distance < closestHit.distance)
+		for (int i = 0; i < meshData->triangleCount; i++)
 		{
-			closestHit = triHit;
-			closestTriangle = i;
+			int i0 = indices[i * 3 + 0] * 3;
+			int i1 = indices[i * 3 + 1] * 3;
+			int i2 = indices[i * 3 + 2] * 3;
+
+			float4 v0 = make_float4(vertices[i0 + 0], vertices[i0 + 1], vertices[i0 + 2], 1.0f);
+			float4 v1 = make_float4(vertices[i1 + 0], vertices[i1 + 1], vertices[i1 + 2], 1.0f);
+			float4 v2 = make_float4(vertices[i2 + 0], vertices[i2 + 1], vertices[i2 + 2], 1.0f);
+
+			v0 = matVecMul(modelMatrix, v0);
+			v1 = matVecMul(modelMatrix, v1);
+			v2 = matVecMul(modelMatrix, v2);
+
+			GPUTriangleHit triHit = distToTriangle(ray, v0, v1, v2);
+			if (triHit.distance < closestHit.distance)
+			{
+				closestHit = triHit;
+				closestTriangle = i;
+				closestMeshIndex = meshInd;
+			}
 		}
 	}
 
 	GPURayHit output = {};
 	output.didHit = false;
 
-	if (closestTriangle == -1) return output;
+	if (closestMeshIndex == -1) return output;
+
+	meshData = meshes[closestMeshIndex]; 
+	vertices = meshData->vertices; 
+	uvCoords = meshData->uvs; 
+	indices = meshData->indices; 
+	normals = meshData->normals;
 	
 	int i0 = indices[closestTriangle * 3 + 0];
 	int i1 = indices[closestTriangle * 3 + 1];
@@ -543,7 +649,7 @@ __device__ GPURayHit getIntersectionPoint(const GPURay& ray, const ObjectData& d
 	output.hitPosition = interpPosition;
 	output.uv = interpUV;
 	output.tbnMatrix = tbnMatrix;
-	output.material = data.material;
+	output.material = materials[materialIndices[closestMeshIndex]];
 
 	return output;
 }

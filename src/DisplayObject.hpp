@@ -20,6 +20,10 @@ public:
 		Position = position;
 		Rotation = rotation;
 		Scale	 = scale;
+
+		// reserve space for 1 mesh and 1 material
+		materials = std::vector<Material*>(1);
+		meshes = std::vector<std::pair<Mesh*, int>>(1);
 	}
 
 	glm::mat4 getModelMatrix()
@@ -40,17 +44,50 @@ public:
 	inline void setRotation(glm::quat rotation)		{ Rotation = rotation; }
 	inline void setScale(glm::vec3 scale)			{ Scale = scale; }
 
-	inline Mesh* getMesh() { return mesh; }
-	inline Material* getMaterial() { return material; }
-	inline GPUMaterial* getGPUMaterial() { return material->getGPUMaterial(); }
+	inline Mesh* getMesh() { return meshes[0].first; }
+	inline Material* getMaterial() { return materials[meshes[0].second]; }
+	inline GPUMaterial* getGPUMaterial() { return materials[0]->getGPUMaterial(); }
 
-	inline void setMaterialName(std::string name) { material = Material::getMaterial(name); }
+	inline void setMaterialName(std::string name) { materials[0] = Material::getMaterial(name); } 
+
+	inline bool isCompositeObject() { return isComposite; }
+	inline float3 getMaxBound() { return compositeMaxBounds; } 
+	inline float3 getMinBound() { return compositeMinBounds; }
+
+	inline std::vector<std::pair<Mesh*, int>> getMeshes() { return meshes; }
+	inline std::vector<Material*> getMaterials() { return materials; }
 protected:
 
 	glm::vec3 Position;
 	glm::quat Rotation;
 	glm::vec3 Scale;
 
-	Mesh* mesh = 0;
-	Material* material = 0;
+	float3 compositeMaxBounds;
+	float3 compositeMinBounds;
+
+	std::vector<std::pair<Mesh*, int>> meshes; // Mesh, Material Index
+	std::vector<Material*> materials;
+
+	bool isComposite = false;
+
+	void updateCompositeBounds()
+	{
+		compositeMaxBounds = make_float3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+		compositeMinBounds = make_float3(FLT_MAX, FLT_MAX, FLT_MAX);
+
+		for (auto meshPair : meshes)
+		{
+			Mesh* mesh = meshPair.first;
+
+			float3 maxBounds = mesh->getMaxBound(); 
+			float3 minBounds = mesh->getMinBound(); 
+
+			printf("Max Bounds: %f, %f, %f\n", maxBounds.x, maxBounds.y, maxBounds.z);
+			printf("Min Bounds: %f, %f, %f\n", minBounds.x, minBounds.y, minBounds.z);
+
+			compositeMaxBounds = make_float3(fmaxf(maxBounds.x, compositeMaxBounds.x), fmaxf(maxBounds.y, compositeMaxBounds.y), fmaxf(maxBounds.z, compositeMaxBounds.z));
+			compositeMinBounds = make_float3(fminf(minBounds.x, compositeMinBounds.x), fminf(minBounds.y, compositeMinBounds.y), fminf(minBounds.z, compositeMinBounds.z));
+			
+		}
+	}
 };
