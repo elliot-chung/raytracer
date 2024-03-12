@@ -2,6 +2,14 @@
 
 #include <unordered_map>
 #include "DisplayObject.hpp"
+#include "linal.hpp"
+
+struct GPUObjectData
+{
+	mat4 modelMatrix;
+
+	LLGPUObjectData* llData;
+};
 
 class Scene
 {
@@ -40,6 +48,8 @@ public:
 	}
 	
 	inline ObjectMap& getObjects() { return objectMap; }
+
+	// inline GPUObjectDataVector getGPUObjectDataVector() {}
 	
 	void sendToGPU()
 	{

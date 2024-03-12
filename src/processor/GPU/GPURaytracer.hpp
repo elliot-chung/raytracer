@@ -57,7 +57,7 @@ struct GPURay
 	float	maxDistance;
 };
 
-struct ObjectDataVector
+struct GPUObjectDataVector
 {
 	GPUObjectData* data;
 	int size;
@@ -122,13 +122,13 @@ private:
 }; 
 
 // GPU kernel forward declarations
-__global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, ObjectDataVector objectDataVector, const RendererParams renderer, const SkyLightParams skylight, const bool debug, DebugInfo* debugInfo);
+__global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, GPUObjectDataVector objectDataVector, const RendererParams renderer, const SkyLightParams skylight, const bool debug, DebugInfo* debugInfo);
 
 __device__ GPURay setupRay(const CameraParams& camera, const int x, const int y, const int bounceCount, const float maxDistance, const bool aaEnabled, unsigned int& seed);
 
-__device__ float4 trace(GPURay& ray, const ObjectDataVector& objectDataVector, SkyLightParams skylight, const float aoIntensity, unsigned int& seed, const bool debug, DebugInfo* debugInfo);
+__device__ float4 trace(GPURay& ray, const GPUObjectDataVector& objectDataVector, SkyLightParams skylight, const float aoIntensity, unsigned int& seed, const bool debug, DebugInfo* debugInfo);
 
-__device__ GPURayHit getIntersectionPoint(GPURay& ray, const ObjectDataVector& dataVector);
+__device__ GPURayHit getIntersectionPoint(GPURay& ray, const GPUObjectDataVector& dataVector);
 
 __device__ GPUMaterialPositionData getMaterialData(const GPURayHit& hit);
 
