@@ -260,12 +260,12 @@ void Window::renderLoop()
     Cube cube(glm::vec3(0.0f, -1.0f, 0.0f), glm::quat(), glm::vec3(100.0f, 1.0f, 100.0f));
     scene->addToScene("cube", &cube);
     cube.setMaterialName("floormat");
-    cube.sendToGPU();
+
 
     Cube cube2(glm::vec3(0.0f, 2.0f, 0.0f));
     scene->addToScene("cube2", &cube2);
     cube2.setMaterialName("lightmat");
-    cube2.sendToGPU();
+
 
     /*Cube cube3(glm::vec3(-1.5f, 0.0f, -1.5f));  
     scene->addToScene("cube3", &cube3); 
@@ -295,9 +295,9 @@ void Window::renderLoop()
         std::string name = "sphere" + std::to_string(i);
 		scene->addToScene(name, sphere);
 		sphere->setMaterialName("halfsmoothmetal");
-        sphere->sendToGPU();
     }
 
+    scene->sendToGPU();
 
     ImGuiIO& io = ImGui::GetIO();
 

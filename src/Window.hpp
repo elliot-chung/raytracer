@@ -20,7 +20,7 @@
 
 #include "Shader.hpp"
 #include "Camera.hpp"
-#include "Scene.hpp"
+#include "Scene.cuh"
 #include "Cube.hpp"
 #include "Sphere.hpp"
 #include "Material.hpp"

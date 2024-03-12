@@ -57,12 +57,6 @@ struct GPURay
 	float	maxDistance;
 };
 
-struct GPUObjectDataVector
-{
-	GPUObjectData* data;
-	int size;
-};
-
 struct CameraParams
 {
 	float4	origin;
@@ -122,7 +116,7 @@ private:
 }; 
 
 // GPU kernel forward declarations
-__global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, GPUObjectDataVector objectDataVector, const RendererParams renderer, const SkyLightParams skylight, const bool debug, DebugInfo* debugInfo);
+__global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, const GPUObjectDataVector objectDataVector, const RendererParams renderer, const SkyLightParams skylight, const bool debug, DebugInfo* debugInfo);
 
 __device__ GPURay setupRay(const CameraParams& camera, const int x, const int y, const int bounceCount, const float maxDistance, const bool aaEnabled, unsigned int& seed);
 

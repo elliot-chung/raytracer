@@ -89,6 +89,8 @@ public:
 
 		hostData->meshCount = meshes.size();
 
+		hostData->isComposite = isComposite; 
+
 		GPUMeshData** meshesHost = new GPUMeshData * [meshes.size()];
 		int* materialIndicesHost = new int[meshes.size()];
 		GPUMaterial** materialsHost = new GPUMaterial * [materials.size()];
@@ -105,8 +107,6 @@ public:
 			materialsHost[i] = materials[i]->getGPUMaterial();
 		}
 
-
-
 		checkCudaErrors(cudaMalloc((void**)&gpuMeshes, sizeof(GPUMeshData*) * meshes.size()));
 		checkCudaErrors(cudaMalloc((void**)&gpuMaterialIndices, sizeof(int) * meshes.size()));
 		checkCudaErrors(cudaMalloc((void**)&gpuMaterials, sizeof(GPUMaterial*) * materials.size()));
@@ -118,8 +118,6 @@ public:
 		delete[] meshesHost;
 		delete[] materialIndicesHost;
 		delete[] materialsHost;
-
-		hostData->isComposite = isComposite;
 
 		hostData->meshes = gpuMeshes;
 		hostData->materialIndices = gpuMaterialIndices;

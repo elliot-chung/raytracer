@@ -53,33 +53,8 @@ void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera
 	skyLightSettings.direction = lightDirection;
 	skyLightSettings.lightColor = lightColor;
 	skyLightSettings.skyColor = skyColor;
-
-	// -----------------------------
-	// Transfer Scene Data to GPU
-	Scene::ObjectMap objects = scene->getObjects();
-	GPUObjectData* objectDataArray = new GPUObjectData[objects.size()]; 
-	int i = 0;
-	for (auto& objPair : objects)
-	{
-		DisplayObject* obj = objPair.second;
-		GPUObjectData data = {};
-		 
-		mat4transfer(data.modelMatrix, obj->getModelMatrix());
-		data.llData = obj->getGPUData();
-
-		objectDataArray[i++] = data;
-	}
-	GPUObjectData* objectDataArrayDev;
-	checkCudaErrors(cudaMalloc((void**)&objectDataArrayDev, sizeof(GPUObjectData) * objects.size()));
-	checkCudaErrors(cudaMemcpy(objectDataArrayDev, objectDataArray, sizeof(GPUObjectData) * objects.size(), cudaMemcpyHostToDevice));
-
-	GPUObjectDataVector objectDataVector = {};
-	objectDataVector.data = objectDataArrayDev;
-	objectDataVector.size = objects.size();
-
 	
-	// (This block of code should be moved to the Scene class, remember to move the cudaFree call as well)
-	// ----------------------------
+	GPUObjectDataVector objectDataVector = scene->getGPUObjectDataVector();
 
 	// Create Debug Output
 	DebugInfo* debugInfo = nullptr;
@@ -96,6 +71,8 @@ void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera
 	raytraceKernel<<<gridSize, blockSize>>>(camSettings, canvas, objectDataVector, rendererSettings, skyLightSettings, debug, debugInfo);
 	checkCudaErrors(cudaPeekAtLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
+
+	
 
 	// Transfer Debug Output
 	if (debug) 
@@ -122,14 +99,16 @@ void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera
 		progressiveFrameCount++;
 	else 
 		progressiveFrameCount = 0;
+
 	
-	checkCudaErrors(cudaFree(objectDataArrayDev));
+	
+	// checkCudaErrors(cudaFree(objectDataVector.data)); 
 	if (debug) checkCudaErrors(cudaFree(debugInfo));
 }
 
 
 
-__global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, GPUObjectDataVector objectDataVector, const RendererParams renderer, const SkyLightParams skylight, const bool debug, DebugInfo* debugInfo)
+__global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, const GPUObjectDataVector objectDataVector, const RendererParams renderer, const SkyLightParams skylight, const bool debug, DebugInfo* debugInfo)
 {
 	__shared__ float4 sharedMemory[BLOCK_SIZE][BLOCK_SIZE][MAXIMUM_AA]; 
 	unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
