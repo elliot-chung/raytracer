@@ -8,6 +8,8 @@
 #include "Mesh.hpp"
 #include "Material.hpp"
 
+#include <algorithm>
+
 const glm::vec3 DEFAULT_POSITION = glm::vec3(0.0f);
 const glm::quat DEFAULT_ROTATION = glm::quat();
 const glm::vec3 DEFAULT_SCALE = glm::vec3(1.0f);
@@ -34,10 +36,6 @@ public:
 		Position = position;
 		Rotation = rotation;
 		Scale	 = scale;
-
-		// reserve space for 1 mesh and 1 material
-		materials = std::vector<Material*>(1);
-		meshes = std::vector<std::pair<Mesh*, int>>(1);
 	}
 
 	~DisplayObject()
@@ -71,7 +69,8 @@ public:
 	inline GPUMaterial* getGPUMaterial() { return materials[0]->getGPUMaterial(); }
 	inline LLGPUObjectData* getGPUData() { return gpuData; }
 
-	inline void setMaterialName(std::string name) { materials[0] = Material::getMaterial(name); } 
+	inline void setMaterialName(std::string name) { materials.push_back(Material::getMaterial(name)); } 
+	inline void setMaterialNameVector(std::vector<std::string> names) { std::transform(names.begin(), names.end(), std::back_inserter(materials), Material::getMaterial); }
 
 	inline bool isCompositeObject() { return isComposite; }
 	inline float3 getMaxBound() { return compositeMaxBounds; } 

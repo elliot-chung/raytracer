@@ -261,11 +261,14 @@ void Window::renderLoop()
     scene->addToScene("cube", &cube);
     cube.setMaterialName("floormat");
 
-
     Cube cube2(glm::vec3(0.0f, 2.0f, 0.0f));
     scene->addToScene("cube2", &cube2);
     cube2.setMaterialName("lightmat");
 
+    DoubleCube cube3(glm::vec3(0.0f, 0.0f, 0.0f));
+    scene->addToScene("cube3", &cube3);
+    std::vector<std::string> names = { "smoothhalfmetal", "halfsmoothmetal" };
+    cube3.setMaterialNameVector(names); 
 
     /*Cube cube3(glm::vec3(-1.5f, 0.0f, -1.5f));  
     scene->addToScene("cube3", &cube3); 
@@ -286,7 +289,7 @@ void Window::renderLoop()
     Sphere sphere(glm::vec3(0.0f, 4.0f, 0.0f)); 
     scene->addToScene("sphere", &sphere); 
     sphere.setMaterialName("pbrbrick");*/
-
+    /*
     for (int i = 0; i < 100; i++)
     {
         float x = (rand() % 1000) / 10.0f - 50.0f;
@@ -296,6 +299,7 @@ void Window::renderLoop()
 		scene->addToScene(name, sphere);
 		sphere->setMaterialName("halfsmoothmetal");
     }
+    */
 
     scene->sendToGPU();
 

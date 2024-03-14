@@ -22,6 +22,7 @@
 #include "Camera.hpp"
 #include "Scene.hpp"
 #include "Cube.hpp"
+#include "DoubleCube.hpp"
 #include "Sphere.hpp"
 #include "Material.hpp"
 #include "helper_cuda.h"

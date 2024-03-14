@@ -153,6 +153,7 @@
   <ItemGroup>
     <ClInclude Include="src\Cube.hpp" />
     <ClInclude Include="src\DisplayObject.hpp" />
+    <ClInclude Include="src\DoubleCube.hpp" />
     <ClInclude Include="src\global.hpp" />
     <ClInclude Include="src\helper_cuda.h" />
     <ClInclude Include="src\helper_string.h" />

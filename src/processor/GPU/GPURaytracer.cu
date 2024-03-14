@@ -24,35 +24,36 @@ __device__ float4 getSkyLight(const float4& direction, const float4& lightDirect
 void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera> camera, cudaSurfaceObject_t canvas)
 {
 	// Camera Parameters
-	CameraParams camSettings = {};
-	glm::vec4 position = glm::vec4(camera->getPosition(), 1.0f);
-	glm::quat rotation = camera->getRotation();
-	float exposure = camera->getExposure();
-	int width = camera->getWidth();
-	int height = camera->getHeight();
-	cudaTextureObject_t rays = camera->getCudaRays();
-
-	vec4transfer(camSettings.origin, position);
-	vec4transfer(camSettings.rotation, rotation);
-	camSettings.exposure = exposure;
-	camSettings.width = width;
-	camSettings.height = height;
-	camSettings.rays = rays;
+	CameraParams camSettings;
+	{
+		glm::vec4 position = glm::vec4(camera->getPosition(), 1.0f);
+		glm::quat rotation = camera->getRotation();
+		vec4transfer(camSettings.origin, position);
+		vec4transfer(camSettings.rotation, rotation);
+		camSettings.exposure = camera->getExposure();
+		camSettings.width = camera->getWidth();
+		camSettings.height = camera->getHeight();
+		camSettings.rays = camera->getCudaRays();
+	}
 
 	// Raytracing Renderer Parameters
-	RendererParams rendererSettings = {};
-	rendererSettings.bounceCount = bounceCount;
-	rendererSettings.maxDistance = maxDistance;
-	rendererSettings.aoIntensity = aoIntensity;
-	rendererSettings.frameCount = frameCount;
-	rendererSettings.progressiveFrameCount = progressiveFrameCount;
-	rendererSettings.antiAliasingEnabled = antiAliasingEnabled;
-	rendererSettings.sampleCount = sampleCount;
+	RendererParams rendererSettings;
+	{
+		rendererSettings.bounceCount = bounceCount;
+		rendererSettings.maxDistance = maxDistance;
+		rendererSettings.aoIntensity = aoIntensity;
+		rendererSettings.frameCount = frameCount;
+		rendererSettings.progressiveFrameCount = progressiveFrameCount;
+		rendererSettings.antiAliasingEnabled = antiAliasingEnabled;
+		rendererSettings.sampleCount = sampleCount;
+	}
 
-	SkyLightParams skyLightSettings = {}; 
-	skyLightSettings.direction = lightDirection;
-	skyLightSettings.lightColor = lightColor;
-	skyLightSettings.skyColor = skyColor;
+	SkyLightParams skyLightSettings; 
+	{
+		skyLightSettings.direction = lightDirection;
+		skyLightSettings.lightColor = lightColor;
+		skyLightSettings.skyColor = skyColor;
+	}
 	
 	GPUObjectDataVector objectDataVector = scene->getGPUObjectDataVector();
 
@@ -66,13 +67,11 @@ void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera
 
 	// Launch Kernel
 	dim3 blockSize(BLOCK_SIZE, BLOCK_SIZE, MAXIMUM_AA); 
-	dim3 gridSize((width + blockSize.x - 1) / blockSize.x, (height + blockSize.y - 1) / blockSize.y);
+	dim3 gridSize((camSettings.width + blockSize.x - 1) / blockSize.x, (camSettings.height + blockSize.y - 1) / blockSize.y);
 
 	raytraceKernel<<<gridSize, blockSize>>>(camSettings, canvas, objectDataVector, rendererSettings, skyLightSettings, debug, debugInfo);
 	checkCudaErrors(cudaPeekAtLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
-
-	
 
 	// Transfer Debug Output
 	if (debug) 

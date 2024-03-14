@@ -111,7 +111,7 @@ public:
 		};
 
 		static Mesh sMesh(vertices, indices, uvCoords);
-		meshes[0] = std::pair(&sMesh, 0);
+		meshes.push_back(std::pair(&sMesh, 0));
 		updateCompositeBounds(); 
 	}
 };
