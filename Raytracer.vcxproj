@@ -170,7 +170,7 @@
     <ClInclude Include="src\Mesh.hpp" />
     <ClInclude Include="src\processor\GPU\GPURaytracer.hpp" />
     <ClInclude Include="src\processor\Raytracer.hpp" />
-    <ClInclude Include="src\Scene.cuh" />
+    <ClInclude Include="src\Scene.hpp" />
     <ClInclude Include="src\Shader.hpp" />
     <ClInclude Include="src\Camera.hpp" />
     <ClInclude Include="src\Sphere.hpp" />

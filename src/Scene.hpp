@@ -17,11 +17,6 @@ struct GPUObjectDataVector
 	int size;
 	bool isCopy = false;
 
-	/*__device__ __forceinline__ GPUObjectData& operator[](int i)
-	{
-		return data[i];
-	}*/
-
 	GPUObjectDataVector() : data(nullptr), size(0) {}
 
 	GPUObjectDataVector(const GPUObjectDataVector& other) {

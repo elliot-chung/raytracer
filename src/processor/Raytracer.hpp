@@ -5,7 +5,7 @@
 
 #include <glm/glm.hpp>
 
-#include "../Scene.cuh"
+#include "../Scene.hpp"
 #include "../Camera.hpp"
 #include "../Material.hpp"
 

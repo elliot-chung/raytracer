@@ -100,9 +100,6 @@ void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera
 	else 
 		progressiveFrameCount = 0;
 
-	
-	
-	// checkCudaErrors(cudaFree(objectDataVector.data)); 
 	if (debug) checkCudaErrors(cudaFree(debugInfo));
 }
 

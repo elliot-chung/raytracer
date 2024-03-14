@@ -134,7 +134,7 @@
     <ClInclude Include="src\Sphere.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Scene.cuh" />
+    <ClInclude Include="src\Scene.hpp" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="src\processor\GPU\GPURaytracer.cu" />
