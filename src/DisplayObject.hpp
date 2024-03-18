@@ -40,10 +40,10 @@ public:
 
 	~DisplayObject()
 	{
-		checkCudaErrors(cudaFree(gpuMeshes));
-		checkCudaErrors(cudaFree(gpuMaterialIndices));
-		checkCudaErrors(cudaFree(gpuMaterials));
-		checkCudaErrors(cudaFree(gpuData));
+		if (gpuMeshes) checkCudaErrors(cudaFree(gpuMeshes)); 
+		if (gpuMaterialIndices) checkCudaErrors(cudaFree(gpuMaterialIndices)); 
+		if (gpuMaterials) checkCudaErrors(cudaFree(gpuMaterials)); 
+		if (gpuData) checkCudaErrors(cudaFree(gpuData)); 
 	}
 
 	glm::mat4 getModelMatrix()
@@ -168,6 +168,16 @@ protected:
 			compositeMaxBounds = make_float3(fmaxf(maxBounds.x, compositeMaxBounds.x), fmaxf(maxBounds.y, compositeMaxBounds.y), fmaxf(maxBounds.z, compositeMaxBounds.z));
 			compositeMinBounds = make_float3(fminf(minBounds.x, compositeMinBounds.x), fminf(minBounds.y, compositeMinBounds.y), fminf(minBounds.z, compositeMinBounds.z));
 		}
+	}
+
+	void copyHostLLData(const DisplayObject* other)
+	{
+		this->compositeMaxBounds = other->compositeMaxBounds;
+		this->compositeMinBounds = other->compositeMinBounds;
+
+		this->meshes = other->meshes;
+		this->materials = other->materials;
+		this->isComposite = other->isComposite;
 	}
 
 	

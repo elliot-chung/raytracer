@@ -80,12 +80,12 @@ void Material::sendToGPU()
 
 Material::~Material()
 {
-	delete normalTexture;
-	delete albedoTexture;
-	delete roughnessTexture;
-	delete metalTexture;
-	delete ambientOcclusionTexture;
-	delete emissionTexture;
+	if (normalTexture) delete normalTexture;
+	if (albedoTexture) delete albedoTexture;
+	if (roughnessTexture) delete roughnessTexture;
+	if (metalTexture) delete metalTexture;
+	if (ambientOcclusionTexture) delete ambientOcclusionTexture;
+	if (emissionTexture) delete emissionTexture;
 
 	materialMap.erase(materialName);
 }
@@ -223,6 +223,7 @@ Texture::Texture(const char* path)
 
 Texture::~Texture()
 {
+	// printf("Texture: %s, \tReference Count: %i\n", path.c_str(), textureMap[path].first);
 	if (--textureMap[path].first == 0)
 	{
 		delete[] data;
@@ -230,7 +231,7 @@ Texture::~Texture()
 	}
 }
 
-// TODO: Implement bilinear interpolation
+// TODO: Implement bilinear filtering
 glm::vec4 Texture::sampleTexture(float x, float y)
 {
 	if (x < 0.0f || x > 1.0f || y < 0.0f || y > 1.0f)
