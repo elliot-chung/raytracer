@@ -22,7 +22,6 @@
 #include "Camera.hpp"
 #include "Scene.hpp"
 #include "Cube.hpp"
-#include "DoubleCube.hpp"
 #include "Sphere.hpp"
 #include "Material.hpp"
 #include "helper_cuda.h"
@@ -88,6 +87,7 @@ private:
     cudaGraphicsResource* resource = 0;
 
     int width, height;
+    bool vsync = false;
     std::vector<float> data;
 
     float quadVertices[24] = {

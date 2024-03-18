@@ -245,8 +245,6 @@ void Window::renderLoop()
     mat8.setRoughnessTexture("res/modern-brick1_bl/modern-brick1_roughness.png");
     mat8.setAmbientOcclusionTexture("res/modern-brick1_bl/modern-brick1_ambient-occlusion.png");
 
-    
-
     mat1.sendToGPU();
     mat2.sendToGPU();
     mat3.sendToGPU();
@@ -255,7 +253,6 @@ void Window::renderLoop()
     mat6.sendToGPU();
     mat7.sendToGPU();
     mat8.sendToGPU();
-   
 
     Cube cube(glm::vec3(0.0f, -1.0f, 0.0f), glm::quat(), glm::vec3(100.0f, 1.0f, 100.0f));
     scene->addToScene("cube", &cube);
@@ -265,13 +262,12 @@ void Window::renderLoop()
     scene->addToScene("cube2", &cube2);
     cube2.setMaterialName("lightmat");
 
-    DoubleCube cube3(glm::vec3(0.0f, 0.0f, 0.0f));
-    scene->addToScene("cube3", &cube3);
-    std::vector<std::string> names = { "smoothhalfmetal", "halfsmoothmetal" };
-    cube3.setMaterialNameVector(names); 
+    Sphere sphere(glm::vec3(0.0f, 0.0f, 0.0f)); 
+    scene->addToScene("sphere", &sphere); 
+    sphere.setMaterialName("pbrbrick"); 
 
     /*Cube cube3(glm::vec3(-1.5f, 0.0f, -1.5f));  
-    scene->addToScene("cube3", &cube3); 
+    scene->addToScene("cube3", &cube3);
     cube3.setMaterialName("smoothhalfmetal"); 
 
     Cube cube4(glm::vec3(1.5f, 0.0f, -1.5f));
@@ -368,7 +364,7 @@ void Window::renderLoop()
             glfwMakeContextCurrent(backup_current_context);
         }
         
-
+        glfwSwapInterval((int) vsync); 
         glfwSwapBuffers(glfwWindow);
     }
 }
@@ -397,11 +393,10 @@ inline void flipVertical(unsigned char* image, unsigned int width, unsigned int 
 
 void Window::displayWindowGUI(ImGuiIO& io)
 {
-	static bool show_demo_window = false;    
     static int counter = 1;  // Eventually replace with a timestamp
     static bool progressiveRendering = rtCPU->getProgressiveRendering();
     static bool antiAliasing = (bool)rtCPU->getAntiAliasingEnabled();
-    
+
     static int bounceCount = rtCPU->getBounceCount();
     static float maxDistance = rtCPU->getMaxDistance();
     static float aoIntensity = rtCPU->getAOIntensity(); 
@@ -413,15 +408,13 @@ void Window::displayWindowGUI(ImGuiIO& io)
     static float4 lightColor = make_float4(1.0f, 1.0f, 1.0f, 100.0f);
     static float4 skyColor = make_float4(0.5f, 0.5f, 1.0f, 0.3f);
 
-    if (show_demo_window) ImGui::ShowDemoWindow(&show_demo_window);
-
     ImGui::Begin("Render Options");                          
 
     ImGui::Text("GPU: %s", availableGPU ? "Available" : "Not Available");
-    ImGui::Checkbox("Use GPU", &useGPU);      
-    ImGui::SameLine();  ImGui::Checkbox("Demo Window", &show_demo_window);    
+    ImGui::Checkbox("Use GPU", &useGPU);
     ImGui::SameLine();  ImGui::Checkbox("Progressive Rendering", &progressiveRendering);
     ImGui::SameLine();  ImGui::Checkbox("Anti-Aliasing", &antiAliasing);
+    ImGui::SameLine();  ImGui::Checkbox("VSync", &vsync); 
 
     ImGui::InputInt("Bounce Count", &bounceCount, 1, 2);
     ImGui::InputFloat("Max Distance", &maxDistance, 1.0f, 10.0f);

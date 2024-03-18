@@ -53,7 +53,7 @@ protected:
 
 	bool progressiveRendering = false;
 
-	bool antiAliasingEnabled = false;
+	bool antiAliasingEnabled = true;
 
 	unsigned int sampleCount = 1;
 
