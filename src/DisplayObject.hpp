@@ -57,6 +57,8 @@ public:
 		return model;
 	}
 
+	inline glm::mat4 getInverseModelMatrix() { return glm::inverse(getModelMatrix()); } 
+
 	virtual void update(ImGuiIO& io) {}
 	virtual void updateGUI(ImGuiIO& io) {}
 

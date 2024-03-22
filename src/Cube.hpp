@@ -110,7 +110,7 @@ public:
 			0.0f, 0.0f,
 		};
 
-		static Mesh sMesh(vertices, indices, uvCoords);
+		static Mesh sMesh(vertices, indices, uvCoords, std::vector<float>());
 		meshes.push_back(std::pair(&sMesh, 0));
 		updateCompositeBounds(); 
 	}

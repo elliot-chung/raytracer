@@ -27,52 +27,23 @@ struct GPUMeshData
 class Mesh
 {
 public:
-	Mesh(std::vector<float>& vertices, std::vector<int>& indices, std::vector<float>& uvCoords)
-	{
-		this->vertices		= vertices;
-		this->indices	    = indices;
-		this->uvCoords		= uvCoords;
-		this->triangleCount = indices.size() / 3;
-		calcBounds();
-
-		if (availableGPU)
-		{
-			cudaVertices = uploadToGPU(cudaVertices, this->vertices);
-			cudaUVCoords = uploadToGPU(cudaUVCoords, this->uvCoords);
-			cudaIndices  = uploadToGPU(cudaIndices, this->indices);
-			cudaNormals  = 0;
-
-			GPUMeshData meshData;
-			meshData.vertices = cudaVertices;
-			meshData.uvs = cudaUVCoords;
-			meshData.indices = cudaIndices;
-			meshData.normals = cudaNormals;
-
-			meshData.triangleCount = triangleCount;
-
-			meshData.minBounds = make_float3(minBound.x, minBound.y, minBound.z);
-			meshData.maxBounds = make_float3(maxBound.x, maxBound.y, maxBound.z);
-
-			checkCudaErrors(cudaMalloc((void**)&gpuMeshData, sizeof(GPUMeshData)));
-			checkCudaErrors(cudaMemcpy(gpuMeshData, &meshData, sizeof(GPUMeshData), cudaMemcpyHostToDevice));
-		}
-	}
-
 	Mesh(std::vector<float>& vertices, std::vector<int>& indices, std::vector<float>& uvCoords, std::vector<float>& normals)
 	{
 		this->vertices = vertices; 
 		this->indices = indices; 
-		this->uvCoords = uvCoords; 
-		this->normals = normals; 
+		if (uvCoords.size() != 0) this->uvCoords = uvCoords; 
+		if (normals.size() != 0) this->normals = normals; 
 		this->triangleCount = indices.size() / 3; 
 		calcBounds(); 
 
 		if (availableGPU)
 		{
 			cudaVertices = uploadToGPU(cudaVertices, this->vertices); 
-			cudaUVCoords = uploadToGPU(cudaUVCoords, this->uvCoords); 
-			cudaIndices = uploadToGPU(cudaIndices, this->indices); 
-			cudaNormals = uploadToGPU(cudaNormals, this->normals); 
+			cudaIndices = uploadToGPU(cudaIndices, this->indices);
+			if (uvCoords.size() != 0)
+				cudaUVCoords = uploadToGPU(cudaUVCoords, this->uvCoords);
+			if (normals.size() != 0)
+				cudaNormals = uploadToGPU(cudaNormals, this->normals); 
 
 			GPUMeshData meshData; 
 			meshData.vertices = cudaVertices; 
@@ -134,11 +105,11 @@ private:
 
 	void calcBounds()
 	{
-		for (int i = 0; i < triangleCount; i++)
+		for (int i = 0; i < vertices.size() / 3; i++)
 		{
-			float x = vertices[i];
-			float y = vertices[i + 1];
-			float z = vertices[i + 2];
+			float x = vertices[3 * i];
+			float y = vertices[3 * i + 1];
+			float z = vertices[3 * i + 2];
 
 			if (minBound.x > x) minBound.x = x;
 			if (minBound.y > y) minBound.y = y;

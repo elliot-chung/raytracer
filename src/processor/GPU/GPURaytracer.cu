@@ -326,37 +326,37 @@ __device__ bool intersectsObjectBoundingBox(const GPURay& ray, const GPUObjectDa
 	float4 minBound = make_float4(mnb.x, mnb.y, mnb.z, 1.0f);
 	float4 maxBound = make_float4(mxb.x, mxb.y, mxb.z, 1.0f); 
 
-	minBound = matVecMul(data.modelMatrix, minBound);
-	maxBound = matVecMul(data.modelMatrix, maxBound);
+	float4 dirBBspace = matVecMul(data.inverseModelMatrix, ray.direction);
+	float4 originBBspace = matVecMul(data.inverseModelMatrix, ray.origin);
 
-	float3 dirInv = make_float3(1.0f / ray.direction.x, 1.0f / ray.direction.y, 1.0f / ray.direction.z); 
+	float3 dirInv = make_float3(1.0f / dirBBspace.x, 1.0f / dirBBspace.y, 1.0f / dirBBspace.z);
 
-	bool sign = signbit(ray.direction.x); 
+	bool sign = signbit(dirBBspace.x);
 	float bmin = sign ? maxBound.x : minBound.x; 
 	float bmax = sign ? minBound.x : maxBound.x; 
 
-	float dmin = (bmin - ray.origin.x) * dirInv.x; 
-	float dmax = (bmax - ray.origin.x) * dirInv.x; 
+	float dmin = (bmin - originBBspace.x) * dirInv.x;
+	float dmax = (bmax - originBBspace.x) * dirInv.x;
 
 	tmin = max(dmin, tmin);  
 	tmax = min(dmax, tmax);  
 	 
-	sign = signbit(ray.direction.y); 
+	sign = signbit(dirBBspace.y);
 	bmin = sign ? maxBound.y : minBound.y; 
 	bmax = sign ? minBound.y : maxBound.y; 
 
-	dmin = (bmin - ray.origin.y) * dirInv.y; 
-	dmax = (bmax - ray.origin.y) * dirInv.y;  
+	dmin = (bmin - originBBspace.y) * dirInv.y;
+	dmax = (bmax - originBBspace.y) * dirInv.y;
 
 	tmin = max(dmin, tmin); 
 	tmax = min(dmax, tmax);  
 
-	sign = signbit(ray.direction.z); 
+	sign = signbit(dirBBspace.z);
 	bmin = sign ? maxBound.z : minBound.z; 
 	bmax = sign ? minBound.z : maxBound.z;  
 
-	dmin = (bmin - ray.origin.z) * dirInv.z;  
-	dmax = (bmax - ray.origin.z) * dirInv.z;  
+	dmin = (bmin - originBBspace.z) * dirInv.z;
+	dmax = (bmax - originBBspace.z) * dirInv.z;
 	 
 	tmin = max(dmin, tmin);  
 	tmax = min(dmax, tmax);  

@@ -223,79 +223,24 @@ void Window::createSurfaceObject()
 
 void Window::renderLoop()
 {
-    Material mat1("floormat", glm::vec4(1.0f, 1.0f, 1.0f, 1.0f), 1.0f);
-
-    Material mat2("lightmat", glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0.0f, glm::vec3(1.0f, 1.0f, 1.0f), 1.0f); 
-
-    Material mat3("smoothhalfmetal", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), 0.0f, 0.5f);
-    Material mat4("halfsmoothmetal", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), 0.5f, 1.0f);
-    Material mat5("roughhalfmetal", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), 1.0f, 0.5f);
-    Material mat6("halfsmoothdielectric", glm::vec4(1.0f, 0.0f, 0.0f, 1.0f), 0.5f, 0.0f);
-    Material mat7("pbrmetal");
-    Material mat8("pbrbrick");
-
-    mat7.setAlbedoTexture("res/metalmaterial/Metal046B_1K-PNG_Color.png");
-    mat7.setNormalTexture("res/metalmaterial/Metal046B_1K-PNG_NormalGL.png");
-    mat7.setMetalTexture("res/metalmaterial/Metal046B_1K-PNG_Metalness.png");
-    mat7.setRoughnessTexture("res/metalmaterial/Metal046B_1K-PNG_Roughness.png");
-
-    mat8.setAlbedoTexture("res/modern-brick1_bl/modern-brick1_albedo.png");
-    mat8.setNormalTexture("res/modern-brick1_bl/modern-brick1_normal-ogl.png");
-    mat8.setMetalTexture("res/modern-brick1_bl/modern-brick1_metallic.png");
-    mat8.setRoughnessTexture("res/modern-brick1_bl/modern-brick1_roughness.png");
-    mat8.setAmbientOcclusionTexture("res/modern-brick1_bl/modern-brick1_ambient-occlusion.png");
-
-    mat1.sendToGPU();
-    mat2.sendToGPU();
-    mat3.sendToGPU();
-    mat4.sendToGPU();
-    mat5.sendToGPU();
-    mat6.sendToGPU();
-    mat7.sendToGPU();
-    mat8.sendToGPU();
-
-    Cube cube(glm::vec3(0.0f, -1.0f, 0.0f), glm::quat(), glm::vec3(100.0f, 1.0f, 100.0f));
-    scene->addToScene("cube", &cube);
-    cube.setMaterialName("floormat");
-
-    Cube cube2(glm::vec3(0.0f, 2.0f, 0.0f));
-    scene->addToScene("cube2", &cube2);
-    cube2.setMaterialName("lightmat");
-
-    Sphere sphere(glm::vec3(0.0f, 0.0f, 0.0f)); 
-    scene->addToScene("sphere", &sphere); 
-    sphere.setMaterialName("pbrbrick"); 
-
-    /*Cube cube3(glm::vec3(-1.5f, 0.0f, -1.5f));  
-    scene->addToScene("cube3", &cube3);
-    cube3.setMaterialName("smoothhalfmetal"); 
-
-    Cube cube4(glm::vec3(1.5f, 0.0f, -1.5f));
-    scene->addToScene("cube4", &cube4);
-    cube4.setMaterialName("halfsmoothmetal");
-
-    Cube cube5(glm::vec3(-1.5f, 0.0f, 1.5f));
-	scene->addToScene("cube5", &cube5);
-    cube5.setMaterialName("roughhalfmetal");
-
-    Cube cube6(glm::vec3(1.5f, 0.0f, 1.5f));
-    scene->addToScene("cube6", &cube6);
-    cube6.setMaterialName("halfsmoothdielectric");
-
-    Sphere sphere(glm::vec3(0.0f, 4.0f, 0.0f)); 
-    scene->addToScene("sphere", &sphere); 
-    sphere.setMaterialName("pbrbrick");*/
     /*
-    for (int i = 0; i < 100; i++)
-    {
-        float x = (rand() % 1000) / 10.0f - 50.0f;
-		float z = (rand() % 1000) / 10.0f - 50.0f;
-		Sphere* sphere = new Sphere(glm::vec3(x, 0.0f, z));
-        std::string name = "sphere" + std::to_string(i);
-		scene->addToScene(name, sphere);
-		sphere->setMaterialName("halfsmoothmetal");
-    }
+    Material mat("test");
+    mat.setAlbedoTexture("C:/Users/ec201/OneDrive/Desktop/raytracer/res/pbrsword/texture/Material.002_Base_Color.png");
+    mat.sendToGPU();
+
+    Sphere sphere(glm::vec3(0.0f, 0.0f, 0.0f));
+    sphere.setMaterialName("test");
+    scene->addToScene("Sphere", &sphere);
     */
+
+    //CustomModel model("C:/Users/ec201/OneDrive/Desktop/raytracer/res/basiclowpoly/Airplane.obj");
+    //CustomModel model("C:/Users/ec201/OneDrive/Desktop/raytracer/res/pbrsword/source/murasama.fbx");
+    scene->addToScene("Custom Model", &model);
+
+    //model.setScale(glm::vec3(2.0f, 2.0f, 2.0f));
+    // model.setScale(glm::vec3(0.001f, 0.001f, 0.001f));
+    //glm::quat rotation = glm::quat(glm::vec3(glm::radians(-90.0f), 0.0f, 0.0f));
+    //model.setRotation(rotation);
 
     scene->sendToGPU();
 

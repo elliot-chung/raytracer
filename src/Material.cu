@@ -138,40 +138,48 @@ glm::vec3 Material::getEmissionColor(float x, float y)
 		return glm::vec3(emissionTexture->sampleTexture(x, y));
 }
 
+inline bool setTextureRef(Texture*& texture, const char* path)
+{
+	if (texture != 0) delete texture;
+	texture = new Texture(path);
+
+	if (!texture->getLoadSuccess())
+	{
+		delete texture;
+		texture = 0;
+		return false;
+	}
+	return true;
+}
+
 bool Material::setNormalTexture(const char* path)
 {
-	normalTexture = new Texture(path);
-	return normalTexture->getLoadSuccess();
+	return setTextureRef(normalTexture, path);
 }
 
 bool Material::setAlbedoTexture(const char* path)
 {
-	albedoTexture = new Texture(path);
-	return albedoTexture->getLoadSuccess();
+	return setTextureRef(albedoTexture, path);
 }
 
 bool Material::setRoughnessTexture(const char* path)
 {
-	roughnessTexture = new Texture(path);
-	return roughnessTexture->getLoadSuccess();
+	return setTextureRef(roughnessTexture, path);
 }
 
 bool Material::setMetalTexture(const char* path)
 {
-	metalTexture = new Texture(path);
-	return metalTexture->getLoadSuccess();
+	return setTextureRef(metalTexture, path);
 }
 
 bool Material::setAmbientOcclusionTexture(const char* path)
 {
-	ambientOcclusionTexture = new Texture(path);
-	return ambientOcclusionTexture->getLoadSuccess();
+	return setTextureRef(ambientOcclusionTexture, path);
 }
 
 bool Material::setEmissionTexture(const char* path)
 {
-	emissionTexture = new Texture(path);
-	return emissionTexture->getLoadSuccess();
+	return setTextureRef(emissionTexture, path);
 }
 
 Texture::Texture(const char* path)
@@ -226,7 +234,7 @@ Texture::~Texture()
 	// printf("Texture: %s, \tReference Count: %i\n", path.c_str(), textureMap[path].first);
 	if (--textureMap[path].first == 0)
 	{
-		delete[] data;
+		if (loadSuccess) delete[] data;
 		textureMap.erase(path);
 	}
 }

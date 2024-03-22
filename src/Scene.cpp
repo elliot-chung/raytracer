@@ -8,8 +8,10 @@ GPUObjectDataVector Scene::getGPUObjectDataVector()
 	{
 		DisplayObject* obj = objPair.second;
 		GPUObjectData data = {};
+		glm::mat4 mm = obj->getModelMatrix();
 
-		mat4transfer(data.modelMatrix, obj->getModelMatrix());
+		mat4transfer(data.modelMatrix, mm);
+		mat4transfer(data.inverseModelMatrix, glm::inverse(mm));
 		data.llData = obj->getGPUData();
 
 		objectDataArray[i++] = data;

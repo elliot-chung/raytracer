@@ -12,45 +12,11 @@ class CustomModel : public DisplayObject
 {
 public:
 	CustomModel(std::string path,
-				glm::vec3 position = DEFAULT_POSITION,
-				glm::quat rotation = DEFAULT_ROTATION,
-				glm::vec3 scale = DEFAULT_SCALE) : DisplayObject(position, rotation, scale)
-	{
-		this->path = path;
+		glm::vec3 position = DEFAULT_POSITION,
+		glm::quat rotation = DEFAULT_ROTATION,
+		glm::vec3 scale = DEFAULT_SCALE); 
 
-		if (customModels.find(path) != customModels.end())
-		{
-			customModels[path].second++; 
-
-			copyHostLLData(customModels[path].first);
-
-			return;
-		}
-
-		customModels[path] = std::pair<CustomModel*, int>(this, 1);
-
-	}
-
-	~CustomModel()
-	{
-		if (--customModels[path].second == 0)
-		{
-			for (auto material : materials)
-			{
-				delete material;
-			}
-
-			materials.clear(); 
-
-			for (auto meshPair : meshes)
-			{
-				delete meshPair.first;
-			}
-
-			meshes.clear(); 
-			customModels.erase(path);
-		}
-	}
+	~CustomModel();
 
 
 private:
@@ -58,44 +24,13 @@ private:
 
 	std::string path;
 
-	void loadModel(std::string path)
-	{
-		Assimp::Importer importer;
-		const aiScene* scene = importer.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs);
+	void loadModel(std::string path);
 
-		if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
-		{
-			printf("ERROR::ASSIMP::%s", importer.GetErrorString());
-			return;
-		}
+	void processAllMaterials(const aiScene* scene);
 
-		
-	}
+	Material* processMaterial(const aiMaterial* material);
 
-	void processAllMeshes(const aiScene *scene)
-	{
-		for (unsigned int i = 0; i < scene->mNumMeshes; i++)
-		{
-			aiMesh* mesh = scene->mMeshes[i];
+	void processAllMeshes(const aiScene* scene);
 
-			meshes.push_back(std::pair(processMesh(mesh), mesh->mMaterialIndex));
-		}
-	}
-
-	Mesh* processMesh(aiMesh *mesh)
-	{
-		
-
-		// return new Mesh();
-	}
-
-	void processMaterials(const aiScene *scene)
-	{
-		for (unsigned int i = 0; i < scene->mNumMaterials; i++)
-		{
-			aiMaterial* material = scene->mMaterials[i];
-		}
-	}
+	Mesh* processMesh(aiMesh* mesh);
 };
-
-CustomModelMap CustomModel::customModels = {};

@@ -7,6 +7,7 @@
 struct GPUObjectData
 {
 	mat4 modelMatrix;
+	mat4 inverseModelMatrix;
 
 	LLGPUObjectData* llData;
 };

@@ -77,7 +77,7 @@ typedef std::unordered_map<std::string, Material*> MaterialMap;
 class Material
 {
 public:
-	Material(char const* name, glm::vec4 albedo = {}, float roughness = 0.0f, float metal = 0.0f, glm::vec3 emissionColor = {}, float emission = 0);
+	Material(char const* name, glm::vec4 albedo = glm::vec4(0.9f, 0.9f, 0.9f, 1.0f), float roughness = 0.5f, float metal = 0.0f, glm::vec3 emissionColor = {}, float emission = 0);
 	~Material();
 	Material(const Material&) = delete;
 
