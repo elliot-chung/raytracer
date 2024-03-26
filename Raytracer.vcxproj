@@ -136,6 +136,7 @@
   <ItemGroup>
     <ClCompile Include="src\CustomModel.cpp" />
     <ClCompile Include="src\CustomModel.hpp" />
+    <ClCompile Include="src\DisplayObject.cpp" />
     <ClCompile Include="src\glad.c" />
     <ClCompile Include="src\ImGui\imgui.cpp" />
     <ClCompile Include="src\ImGui\imgui_demo.cpp" />

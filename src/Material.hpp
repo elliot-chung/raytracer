@@ -103,6 +103,7 @@ public:
 
 	inline static Material* getMaterial(std::string& name) { return materialMap[name]; }
 	inline static GPUMaterial* getGPUMaterial(std::string& name) { return materialMap[name]->gpuMaterial; }
+	inline static std::vector<Material*> getAllMaterials() { std::vector<Material*> materials; for (auto& m : materialMap) materials.push_back(m.second); return materials; }
 
 	inline GPUMaterial* getGPUMaterial() { return gpuMaterial; }
 

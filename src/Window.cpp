@@ -57,6 +57,12 @@ Window::Window(int width, int height, const char* name)
                 win->mouseMoveCallback(xpos, ypos);
             });
 
+        glfwSetMouseButtonCallback(glfwWindow, [](GLFWwindow* window, int button, int action, int mods)
+            {
+				Window* win = (Window*)glfwGetWindowUserPointer(window);
+				win->mouseButtonCallback(button, action, mods); 
+			});
+
         glfwSetFramebufferSizeCallback(glfwWindow, [](GLFWwindow* window, int width, int height)
             {
                 Window* win = (Window*)glfwGetWindowUserPointer(window);
@@ -234,8 +240,9 @@ void Window::renderLoop()
     */
 
     //CustomModel model("C:/Users/ec201/OneDrive/Desktop/raytracer/res/basiclowpoly/Airplane.obj");
-    //CustomModel model("C:/Users/ec201/OneDrive/Desktop/raytracer/res/pbrsword/source/murasama.fbx");
+    CustomModel model("C:/Users/ec201/OneDrive/Desktop/raytracer/res/pbrsword/source/murasama.glb");
     scene->addToScene("Custom Model", &model);
+    model.select();
 
     //model.setScale(glm::vec3(2.0f, 2.0f, 2.0f));
     // model.setScale(glm::vec3(0.001f, 0.001f, 0.001f));
@@ -353,7 +360,9 @@ void Window::displayWindowGUI(ImGuiIO& io)
     static float4 lightColor = make_float4(1.0f, 1.0f, 1.0f, 100.0f);
     static float4 skyColor = make_float4(0.5f, 0.5f, 1.0f, 0.3f);
 
-    ImGui::Begin("Render Options");                          
+    ImGui::ShowDemoWindow();
+
+    ImGui::Begin("Options");                          
 
     ImGui::Text("GPU: %s", availableGPU ? "Available" : "Not Available");
     ImGui::Checkbox("Use GPU", &useGPU);
@@ -361,16 +370,23 @@ void Window::displayWindowGUI(ImGuiIO& io)
     ImGui::SameLine();  ImGui::Checkbox("Anti-Aliasing", &antiAliasing);
     ImGui::SameLine();  ImGui::Checkbox("VSync", &vsync); 
 
-    ImGui::InputInt("Bounce Count", &bounceCount, 1, 2);
-    ImGui::InputFloat("Max Distance", &maxDistance, 1.0f, 10.0f);
-    ImGui::InputFloat("AO Intensity", &aoIntensity, 0.005f, 0.05f);
-    ImGui::InputInt("Sample Rate", &sampleRate, 1, 2);
-    ImGui::InputFloat("Light Yaw", &lightYaw, 0.1f, 0.2f);
-    ImGui::InputFloat("Light Pitch", &lightPitch, 0.1f, 0.2f);
-    ImGui::ColorEdit3("Light Color", &lightColor.x);
-    ImGui::InputFloat("Light Intensity", &lightColor.w, 10.0f, 100.0f);
-    ImGui::ColorEdit3("Sky Color", &skyColor.x); 
-    ImGui::InputFloat("Sky Intensity", &skyColor.w, 10.0f, 100.0f);
+    if (ImGui::CollapsingHeader("Renderer Settings"))
+    {
+        ImGui::InputInt("Bounce Count", &bounceCount, 1, 2);
+        ImGui::InputFloat("Max Distance", &maxDistance, 1.0f, 10.0f);
+        ImGui::InputFloat("AO Intensity", &aoIntensity, 0.005f, 0.05f);
+        ImGui::InputInt("Sample Rate", &sampleRate, 1, 2);
+    }
+
+    if (ImGui::CollapsingHeader("Skylight Settings"))
+    {
+        ImGui::InputFloat("Light Yaw", &lightYaw, 0.1f, 0.2f);
+        ImGui::InputFloat("Light Pitch", &lightPitch, 0.1f, 0.2f);
+        ImGui::ColorEdit3("Light Color", &lightColor.x);
+        ImGui::InputFloat("Light Intensity", &lightColor.w, 10.0f, 100.0f);
+        ImGui::ColorEdit3("Sky Color", &skyColor.x);
+        ImGui::InputFloat("Sky Intensity", &skyColor.w, 10.0f, 100.0f);
+    }
 
 	{
         rtGPU->setBounceCount(bounceCount);
@@ -421,6 +437,13 @@ void Window::mouseMoveCallback(double xpos, double ypos)
     for (auto callback : mouseMoveCallbacks)
         if (callback.first)
             callback.second(xpos, ypos);
+}
+
+void Window::mouseButtonCallback(int button, int action, int mods)
+{
+    for (auto callback : mouseButtonCallbacks)
+		if (callback.first)
+			callback.second(button, action, mods);
 }
 
 void Window::resizeCallback(int width, int height)

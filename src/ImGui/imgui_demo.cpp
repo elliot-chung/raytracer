@@ -929,8 +929,8 @@ static void ShowDemoWindowWidgets()
     }
 
     // Testing ImGuiOnceUponAFrame helper.
-    //static ImGuiOnceUponAFrame once;
-    //for (int i = 0; i < 5; i++)
+    // static ImGuiOnceUponAFrame once;
+    // for (int i = 0; i < 5; i++)
     //    if (once)
     //        ImGui::Text("This will be displayed only once.");
 

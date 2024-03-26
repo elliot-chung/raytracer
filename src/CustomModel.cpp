@@ -98,6 +98,7 @@ bool setOutputTexture(const aiMaterial* material, aiTextureType type, std::strin
 Material* CustomModel::processMaterial(const aiMaterial* material)
 {
 	aiString name = material->GetName();
+	if (name.length == 0) name = aiString("No Material Name Found");
 	Material* output = new Material(name.C_Str());
 
 

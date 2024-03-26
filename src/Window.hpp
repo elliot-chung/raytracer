@@ -39,7 +39,7 @@
 
 typedef const std::function<void(int key, int scancode, int action, int mods)> KeyCallback;
 typedef const std::function<void(double xpos, double ypos)> MouseMoveCallback;
-
+typedef const std::function<void(int button, int action, int mods)> MouseButtonCallback;
 
 class Window
 {
@@ -68,9 +68,11 @@ private:
 
     std::vector<std::pair<bool, KeyCallback>> keyCallbacks;
     std::vector<std::pair<bool, MouseMoveCallback>> mouseMoveCallbacks;
+    std::vector<std::pair<bool, MouseButtonCallback>> mouseButtonCallbacks;
 
     void keyCallback(int key, int scancode, int action, int mods);
     void mouseMoveCallback(double xpos, double ypos);
+    void mouseButtonCallback(int button, int action, int mods);
     void resizeCallback(int width, int height);
 
     std::unique_ptr<Shader> screenShader;

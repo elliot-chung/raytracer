@@ -31,36 +31,16 @@ struct LLGPUObjectData // Long Lifespan GPU Object Data
 class DisplayObject
 {
 public:
-	DisplayObject(glm::vec3 position = DEFAULT_POSITION, glm::quat rotation = DEFAULT_ROTATION, glm::vec3 scale = DEFAULT_SCALE)
-	{
-		Position = position;
-		Rotation = rotation;
-		Scale	 = scale;
-	}
+	DisplayObject(glm::vec3 position = DEFAULT_POSITION, glm::quat rotation = DEFAULT_ROTATION, glm::vec3 scale = DEFAULT_SCALE);
 
-	~DisplayObject()
-	{
-		if (gpuMeshes) checkCudaErrors(cudaFree(gpuMeshes)); 
-		if (gpuMaterialIndices) checkCudaErrors(cudaFree(gpuMaterialIndices)); 
-		if (gpuMaterials) checkCudaErrors(cudaFree(gpuMaterials)); 
-		if (gpuData) checkCudaErrors(cudaFree(gpuData)); 
-	}
+	~DisplayObject();
 
-	glm::mat4 getModelMatrix()
-	{
-		glm::mat4 model = glm::mat4(1.0f);
-		
-		model = glm::translate(model, Position);
-		model = glm::mat4_cast(Rotation) * model;
-		model = glm::scale(model, Scale);
-
-		return model;
-	}
+	glm::mat4 getModelMatrix();
 
 	inline glm::mat4 getInverseModelMatrix() { return glm::inverse(getModelMatrix()); } 
 
 	virtual void update(ImGuiIO& io) {}
-	virtual void updateGUI(ImGuiIO& io) {}
+	virtual void updateGUI(ImGuiIO& io);
 
 	inline void setPosition(glm::vec3 position)		{ Position = position; }
 	inline void setRotation(glm::quat rotation)		{ Rotation = rotation; }
@@ -81,54 +61,10 @@ public:
 	inline std::vector<std::pair<Mesh*, int>> getMeshes() { return meshes; }
 	inline std::vector<Material*> getMaterials() { return materials; }
 
-	void sendToGPU()
-	{
-		LLGPUObjectData* hostData = new LLGPUObjectData();
+	inline void select() { isSelected = true; if (selectedObject) selectedObject->isSelected = false; selectedObject = this; }
+	inline void deselect() { if (this == selectedObject) selectedObject = 0; isSelected = false; }
 
-		hostData->minCompositeBounds = compositeMinBounds;
-		hostData->maxCompositeBounds = compositeMaxBounds;
-
-		hostData->meshCount = meshes.size();
-
-		hostData->isComposite = isComposite; 
-
-		GPUMeshData** meshesHost = new GPUMeshData * [meshes.size()];
-		int* materialIndicesHost = new int[meshes.size()];
-		GPUMaterial** materialsHost = new GPUMaterial * [materials.size()];
-
-
-		for (int i = 0; i < meshes.size(); i++)
-		{
-			meshesHost[i] = meshes[i].first->getGPUMeshData();
-			materialIndicesHost[i] = meshes[i].second;
-		}
-
-		for (int i = 0; i < materials.size(); i++)
-		{
-			materialsHost[i] = materials[i]->getGPUMaterial();
-		}
-
-		checkCudaErrors(cudaMalloc((void**)&gpuMeshes, sizeof(GPUMeshData*) * meshes.size()));
-		checkCudaErrors(cudaMalloc((void**)&gpuMaterialIndices, sizeof(int) * meshes.size()));
-		checkCudaErrors(cudaMalloc((void**)&gpuMaterials, sizeof(GPUMaterial*) * materials.size()));
-
-		checkCudaErrors(cudaMemcpy(gpuMeshes, meshesHost, sizeof(GPUMeshData*) * meshes.size(), cudaMemcpyHostToDevice));
-		checkCudaErrors(cudaMemcpy(gpuMaterialIndices, materialIndicesHost, sizeof(int) * meshes.size(), cudaMemcpyHostToDevice));
-		checkCudaErrors(cudaMemcpy(gpuMaterials, materialsHost, sizeof(GPUMaterial*) * materials.size(), cudaMemcpyHostToDevice));
-
-		delete[] meshesHost;
-		delete[] materialIndicesHost;
-		delete[] materialsHost;
-
-		hostData->meshes = gpuMeshes;
-		hostData->materialIndices = gpuMaterialIndices;
-		hostData->materials = gpuMaterials;
-
-		checkCudaErrors(cudaMalloc((void**)&gpuData, sizeof(LLGPUObjectData)));
-		checkCudaErrors(cudaMemcpy(gpuData, hostData, sizeof(LLGPUObjectData), cudaMemcpyHostToDevice));
-
-		delete hostData;
-	}
+	void sendToGPU();
 protected:
 
 	glm::vec3 Position;
@@ -142,45 +78,18 @@ protected:
 	std::vector<Material*> materials;
 
 	bool isComposite = false;
+	bool isSelected = false;
+
+	static DisplayObject* selectedObject;
 
 	LLGPUObjectData* gpuData;
 	GPUMeshData** gpuMeshes; 
 	int* gpuMaterialIndices; 
 	GPUMaterial** gpuMaterials; 
 
-	void updateCompositeBounds()
-	{
-		if (!isComposite)
-		{
-			compositeMaxBounds = meshes[0].first->getMaxBound(); 
-			compositeMinBounds = meshes[0].first->getMinBound();  
-			return;
-		}
+	void updateCompositeBounds();
 
-		compositeMaxBounds = make_float3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
-		compositeMinBounds = make_float3(FLT_MAX, FLT_MAX, FLT_MAX);
-
-		for (auto meshPair : meshes)
-		{
-			Mesh* mesh = meshPair.first;
-
-			float3 maxBounds = mesh->getMaxBound(); 
-			float3 minBounds = mesh->getMinBound(); 
-
-			compositeMaxBounds = make_float3(fmaxf(maxBounds.x, compositeMaxBounds.x), fmaxf(maxBounds.y, compositeMaxBounds.y), fmaxf(maxBounds.z, compositeMaxBounds.z));
-			compositeMinBounds = make_float3(fminf(minBounds.x, compositeMinBounds.x), fminf(minBounds.y, compositeMinBounds.y), fminf(minBounds.z, compositeMinBounds.z));
-		}
-	}
-
-	void copyHostLLData(const DisplayObject* other)
-	{
-		this->compositeMaxBounds = other->compositeMaxBounds;
-		this->compositeMinBounds = other->compositeMinBounds;
-
-		this->meshes = other->meshes;
-		this->materials = other->materials;
-		this->isComposite = other->isComposite;
-	}
+	void copyHostLLData(const DisplayObject* other);
 
 	
 };
