@@ -61,10 +61,19 @@ public:
 	inline std::vector<std::pair<Mesh*, int>> getMeshes() { return meshes; }
 	inline std::vector<Material*> getMaterials() { return materials; }
 
-	inline void select() { isSelected = true; if (selectedObject) selectedObject->isSelected = false; selectedObject = this; }
-	inline void deselect() { if (this == selectedObject) selectedObject = 0; isSelected = false; }
+	inline void select() { selectedObject = this; }
+	inline void deselect() { if (this == selectedObject) selectedObject = 0; }
+	inline void toggleSelect() { if (this == selectedObject) selectedObject = 0; else selectedObject = this; } 
 
 	void sendToGPU();
+
+	static void displaySelectedObjectGUI(ImGuiIO& io)
+	{
+		ImGui::Begin("Selected Object");
+		if (selectedObject) selectedObject->updateGUI(io); 
+		else ImGui::Text("No object selected");
+		ImGui::End();
+	}
 protected:
 
 	glm::vec3 Position;
@@ -78,7 +87,6 @@ protected:
 	std::vector<Material*> materials;
 
 	bool isComposite = false;
-	bool isSelected = false;
 
 	static DisplayObject* selectedObject;
 

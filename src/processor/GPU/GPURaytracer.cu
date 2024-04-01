@@ -57,54 +57,26 @@ void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera
 	
 	GPUObjectDataVector objectDataVector = scene->getGPUObjectDataVector();
 
-	// Create Debug Output
-	DebugInfo* debugInfo = nullptr;
-	if (debug)
-	{
-		checkCudaErrors(cudaMalloc((void**)&debugInfo, sizeof(DebugInfo)));
-		checkCudaErrors(cudaMemset(debugInfo, -1, sizeof(DebugInfo)));
-	}
 
 	// Launch Kernel
 	dim3 blockSize(BLOCK_SIZE, BLOCK_SIZE, MAXIMUM_AA); 
 	dim3 gridSize((camSettings.width + blockSize.x - 1) / blockSize.x, (camSettings.height + blockSize.y - 1) / blockSize.y);
 
-	raytraceKernel<<<gridSize, blockSize>>>(camSettings, canvas, objectDataVector, rendererSettings, skyLightSettings, debug, debugInfo);
+	raytraceKernel<<<gridSize, blockSize>>>(camSettings, canvas, objectDataVector, rendererSettings, skyLightSettings);
 	checkCudaErrors(cudaPeekAtLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 
-	// Transfer Debug Output
-	if (debug) 
-	{
-		DebugInfo* debugInfoHost = new DebugInfo;
-		checkCudaErrors(cudaMemcpy(debugInfoHost, debugInfo, sizeof(DebugInfo), cudaMemcpyDeviceToHost));
-		std::cout << "First Hit Object:\t" << debugInfoHost->firstObjectDataIndex << '\t';
-		std::cout << "First Hit Origin:\t" << debugInfoHost->firstOrigin.x << ", " << debugInfoHost->firstOrigin.y << ", " << debugInfoHost->firstOrigin.z << '\t';
-		std::cout << "First Hit Direction:\t" << debugInfoHost->firstDirection.x << ", " << debugInfoHost->firstDirection.y << ", " << debugInfoHost->firstDirection.z << '\t';
-		std::cout << "First Hit Position:\t" << debugInfoHost->firstPosition.x << ", " << debugInfoHost->firstPosition.y << ", " << debugInfoHost->firstPosition.z << '\t';
-		std::cout << "First Hit Normal:\t" << debugInfoHost->firstNormal.x << ", " << debugInfoHost->firstNormal.y << ", " << debugInfoHost->firstNormal.z << '\t';
-		std::cout << "First Hit Distance:\t" << debugInfoHost->firstDistance << "\n" << std::endl;
-
-		std::cout << "Second Hit Object:\t" << debugInfoHost->secondObjectDataIndex << '\t';
-		std::cout << "Second Hit Origin:\t" << debugInfoHost->secondOrigin.x << ", " << debugInfoHost->secondOrigin.y << ", " << debugInfoHost->secondOrigin.z << '\t';
-		std::cout << "Second Hit Direction:\t" << debugInfoHost->secondDirection.x << ", " << debugInfoHost->secondDirection.y << ", " << debugInfoHost->secondDirection.z << '\t';
-		std::cout << "Second Hit Position:\t" << debugInfoHost->secondPosition.x << ", " << debugInfoHost->secondPosition.y << ", " << debugInfoHost->secondPosition.z << '\t';
-		std::cout << "Second Hit Normal:\t" << debugInfoHost->secondNormal.x << ", " << debugInfoHost->secondNormal.y << ", " << debugInfoHost->secondNormal.z << '\t';
-		std::cout << "Second Hit Distance:\t" << debugInfoHost->secondDistance << "\n" << std::endl;
-	}
 	
 	frameCount++;
 	if (progressiveRendering)
 		progressiveFrameCount++;
 	else 
 		progressiveFrameCount = 0;
-
-	if (debug) checkCudaErrors(cudaFree(debugInfo));
 }
 
 
 
-__global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, const GPUObjectDataVector objectDataVector, const RendererParams renderer, const SkyLightParams skylight, const bool debug, DebugInfo* debugInfo)
+__global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, const GPUObjectDataVector objectDataVector, const RendererParams renderer, const SkyLightParams skylight)
 {
 	__shared__ float4 sharedMemory[BLOCK_SIZE][BLOCK_SIZE][MAXIMUM_AA]; 
 	unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -124,7 +96,7 @@ __global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, 
 
 		GPURay ray = setupRay(camera, x, y, renderer.bounceCount, renderer.maxDistance, renderer.antiAliasingEnabled, seed);
 
-		float4 partialColor = trace(ray, objectDataVector, skylight, renderer.aoIntensity, seed, (debug && isCenter), debugInfo);
+		float4 partialColor = trace(ray, objectDataVector, skylight, renderer.aoIntensity, seed);
 
 		partialColor = exposureCorrection(partialColor, camera.exposure);
 
@@ -191,7 +163,7 @@ __device__ GPURay setupRay(const CameraParams& camera, const int x, const int y,
 	return ray;
 }
 
-__device__ float4 trace(GPURay& ray, const GPUObjectDataVector& objectDataVector, SkyLightParams skylight, const float aoIntensity, unsigned int& seed, const bool debug, DebugInfo* debugInfo)
+__device__ float4 trace(GPURay& ray, const GPUObjectDataVector& objectDataVector, SkyLightParams skylight, const float aoIntensity, unsigned int& seed)
 {
 	float4 outgoingLight = make_float4(0.0f, 0.0f, 0.0f, 1.0f);  
 	float4 betaAccumulation = make_float4(1.0f, 1.0f, 1.0f, 1.0f);
@@ -211,28 +183,6 @@ __device__ float4 trace(GPURay& ray, const GPUObjectDataVector& objectDataVector
 			break;
 		}
 		GPUMaterialPositionData materialData = getMaterialData(closestHit); 
-
-		// Populate Debug info based on hit information
-		if (debug)
-		{
-			if (i == 0) 
-			{
-				debugInfo->firstObjectDataIndex = closestHit.objectDataIndex;
-				debugInfo->firstOrigin = ray.origin;
-				debugInfo->firstDirection = ray.direction;
-				debugInfo->firstPosition = closestHit.hitPosition;
-				debugInfo->firstNormal = materialData.normal;
-				debugInfo->firstDistance = closestHit.distance;
-			} else if (i == 1)
-			{
-				debugInfo->secondObjectDataIndex = closestHit.objectDataIndex;
-				debugInfo->secondOrigin = ray.origin;
-				debugInfo->secondDirection = ray.direction;
-				debugInfo->secondPosition = closestHit.hitPosition;
-				debugInfo->secondNormal = materialData.normal;
-				debugInfo->secondDistance = closestHit.distance;
-			}
-		}
 		
 		// Outgoing light only increases on the first hit (ambient occlusion) or when hitting an emissive material
 		if (i == 0) // First Hit

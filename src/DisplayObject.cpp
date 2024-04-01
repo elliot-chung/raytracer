@@ -20,8 +20,8 @@ glm::mat4 DisplayObject::getModelMatrix()
 	glm::mat4 model = glm::mat4(1.0f);
 
 	model = glm::translate(model, Position);
-	model = glm::mat4_cast(Rotation) * model;
-	model = glm::scale(model, Scale);
+	model = model * glm::mat4_cast(Rotation);
+	model = glm::scale(model, Scale); 
 
 	return model;
 }
@@ -109,17 +109,19 @@ void DisplayObject::copyHostLLData(const DisplayObject* other)
 	this->isComposite = other->isComposite;
 }
 
-void DisplayObject::updateGUI(ImGuiIO& io) 
+void DisplayObject::updateGUI(ImGuiIO& io)  
 {
-	if (!isSelected) return; 
-
-	ImGui::Begin("Display Object");
 
 	if (ImGui::CollapsingHeader("Transform"))
 	{
-		ImGui::Text("Position: (%f, %f, %f)", Position.x, Position.y, Position.z);
-		ImGui::Text("Rotation: (%f, %f, %f, %f)", Rotation.x, Rotation.y, Rotation.z, Rotation.w);
-		ImGui::Text("Scale: (%f, %f, %f)", Scale.x, Scale.y, Scale.z);
+		static glm::vec3 euler = glm::degrees(glm::eulerAngles(Rotation));
+		ImGui::DragFloat3("Position", &Position[0], 0.1f);
+		ImGui::DragFloat3("Rotation", &euler[0], 1.0f, -359.9f, 359.9f);
+		ImGui::DragFloat3("Scale", &Scale[0], 0.1f, 0);
+		if (euler != glm::degrees(glm::eulerAngles(Rotation)))
+		{
+			Rotation = glm::quat(glm::radians(euler));
+		}
 	}
 
 	if (ImGui::CollapsingHeader("Meshes"))
@@ -173,8 +175,6 @@ void DisplayObject::updateGUI(ImGuiIO& io)
 
 		}
 	}
-
-	ImGui::End(); 
 }
 
-DisplayObject* DisplayObject::selectedObject = 0;
+DisplayObject* DisplayObject::selectedObject = 0; 

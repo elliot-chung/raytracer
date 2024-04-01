@@ -242,7 +242,6 @@ void Window::renderLoop()
     //CustomModel model("C:/Users/ec201/OneDrive/Desktop/raytracer/res/basiclowpoly/Airplane.obj");
     CustomModel model("C:/Users/ec201/OneDrive/Desktop/raytracer/res/pbrsword/source/murasama.glb");
     scene->addToScene("Custom Model", &model);
-    model.select();
 
     //model.setScale(glm::vec3(2.0f, 2.0f, 2.0f));
     // model.setScale(glm::vec3(0.001f, 0.001f, 0.001f));
@@ -281,6 +280,7 @@ void Window::renderLoop()
         displayWindowGUI(io);
         camera->updateGUI(io);  
         scene->updateGUI(io);
+        DisplayObject::displaySelectedObjectGUI(io);
 
         // Object updates
         camera->update(io);
@@ -396,8 +396,6 @@ void Window::displayWindowGUI(ImGuiIO& io)
         rtGPU->setAntiAliasingEnabled(antiAliasing);
         rtGPU->setSampleCount(sampleRate);
         rtGPU->setSkyLight(lightPitch, lightYaw, lightColor, skyColor);
-
-        rtGPU->setDebug(ImGui::Button("Debug"));
 
 		rtCPU->setBounceCount(bounceCount);
 		rtCPU->setMaxDistance(maxDistance);

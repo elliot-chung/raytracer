@@ -62,10 +62,16 @@ public:
 
 	void updateGUI(ImGuiIO& io)
 	{
+		ImGui::Begin("Scene");
 		for (auto& object : objectMap)
 		{
-			object.second->updateGUI(io);
+			// Selectable list of objects
+			if (ImGui::Selectable(object.first.c_str()))
+			{
+				object.second->toggleSelect();
+			}
 		}
+		ImGui::End();
 	}
 	
 	inline ObjectMap& getObjects() { return objectMap; }
