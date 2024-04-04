@@ -90,10 +90,10 @@ protected:
 
 	static DisplayObject* selectedObject;
 
-	LLGPUObjectData* gpuData;
-	GPUMeshData** gpuMeshes; 
-	int* gpuMaterialIndices; 
-	GPUMaterial** gpuMaterials; 
+	LLGPUObjectData* gpuData = 0;
+	GPUMeshData** gpuMeshes = 0;
+	int* gpuMaterialIndices = 0;
+	GPUMaterial** gpuMaterials = 0;
 
 	void updateCompositeBounds();
 

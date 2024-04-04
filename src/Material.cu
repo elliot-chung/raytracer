@@ -27,54 +27,25 @@ Material::Material(char const* name, glm::vec4 albedo, float roughness,
 	materialMap[materialName] = this;
 }
 
-void textureToGPU(Texture* texture, cudaTextureObject_t* gpuTexture)
-{
-	if (texture != 0)
-	{
-		cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<float4>();
-		cudaArray* cuArray;
-		checkCudaErrors(cudaMallocArray(&cuArray, &channelDesc, texture->getWidth(), texture->getHeight()));
-
-		const size_t spitch = texture->getWidth() * sizeof(float4);
-		checkCudaErrors(cudaMemcpy2DToArray(cuArray, 0, 0, texture->getData(), spitch, texture->getWidth() * sizeof(float4), texture->getHeight(), cudaMemcpyHostToDevice));
-
-		struct cudaResourceDesc resDesc;
-		memset(&resDesc, 0, sizeof(resDesc));
-		resDesc.resType = cudaResourceTypeArray;
-		resDesc.res.array.array = cuArray;
-
-		struct cudaTextureDesc texDesc;
-		memset(&texDesc, 0, sizeof(texDesc));
-		texDesc.addressMode[0] = cudaAddressModeClamp;
-		texDesc.addressMode[1] = cudaAddressModeClamp;
-		texDesc.filterMode = cudaFilterModeLinear;
-		texDesc.readMode = cudaReadModeElementType;
-		texDesc.normalizedCoords = 1;
-
-		checkCudaErrors(cudaCreateTextureObject(gpuTexture, &resDesc, &texDesc, NULL));
-
-	}
-	else
-		*gpuTexture = 0;
-}
-
 void Material::sendToGPU()
 {
 	if (!availableGPU) return;
 
 	GPUMaterial hostCopy;
+	//memset(&hostCopy, 0, sizeof(GPUMaterial));
 	hostCopy.albedo = make_float4(simpleAlbedo.r, simpleAlbedo.g, simpleAlbedo.b, simpleAlbedo.a); 
 	hostCopy.roughness = make_float3(simpleRoughness.r, simpleRoughness.g, simpleRoughness.b); 
 	hostCopy.metal = make_float3(simpleMetal.r, simpleMetal.g, simpleMetal.b); 
 	hostCopy.emissionColor = make_float3(simpleEmissionColor.r, simpleEmissionColor.g, simpleEmissionColor.b); 
 	hostCopy.emissionStrength = emissionStrength;
+	
+	if (albedoTexture) hostCopy.albedoTexture = *albedoTexture->getGPUTexture();
+	if (normalTexture) hostCopy.normalTexture = *normalTexture->getGPUTexture();
+	if (roughnessTexture) hostCopy.roughnessTexture = *roughnessTexture->getGPUTexture(); 
+	if (metalTexture) hostCopy.metalTexture = *metalTexture->getGPUTexture();
 
-	textureToGPU(albedoTexture, &hostCopy.albedoTexture);
-	textureToGPU(normalTexture, &hostCopy.normalTexture);  
-	textureToGPU(roughnessTexture, &hostCopy.roughnessTexture);
-	textureToGPU(metalTexture, &hostCopy.metalTexture);
-
-	checkCudaErrors(cudaMalloc(&gpuMaterial, sizeof(GPUMaterial)));
+	if (gpuMaterial == 0)
+		checkCudaErrors(cudaMalloc(&gpuMaterial, sizeof(GPUMaterial)));
 	checkCudaErrors(cudaMemcpy(gpuMaterial, &hostCopy, sizeof(GPUMaterial), cudaMemcpyHostToDevice));
 }
 
@@ -227,6 +198,31 @@ Texture::Texture(const char* path)
 		}
 		delete[] idata;
 	}
+
+	if (availableGPU)
+	{
+		cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<float4>();
+		cudaArray* cuArray;
+		checkCudaErrors(cudaMallocArray(&cuArray, &channelDesc, width, height));
+
+		const size_t spitch = width * sizeof(float4);
+		checkCudaErrors(cudaMemcpy2DToArray(cuArray, 0, 0, data, spitch, width * sizeof(float4), height, cudaMemcpyHostToDevice));
+
+		struct cudaResourceDesc resDesc;
+		memset(&resDesc, 0, sizeof(resDesc));
+		resDesc.resType = cudaResourceTypeArray;
+		resDesc.res.array.array = cuArray;
+
+		struct cudaTextureDesc texDesc;
+		memset(&texDesc, 0, sizeof(texDesc));
+		texDesc.addressMode[0] = cudaAddressModeClamp;
+		texDesc.addressMode[1] = cudaAddressModeClamp;
+		texDesc.filterMode = cudaFilterModeLinear;
+		texDesc.readMode = cudaReadModeElementType;
+		texDesc.normalizedCoords = 1;
+
+		checkCudaErrors(cudaCreateTextureObject(&gpuTexture, &resDesc, &texDesc, NULL)); 
+	}
 }
 
 Texture::~Texture()
@@ -236,6 +232,15 @@ Texture::~Texture()
 	{
 		if (loadSuccess) delete[] data;
 		textureMap.erase(path);
+
+		cudaResourceDesc resDesc; 
+		checkCudaErrors(cudaGetTextureObjectResourceDesc(&resDesc, gpuTexture)); 
+		checkCudaErrors(cudaDestroyTextureObject(gpuTexture)); 
+
+		if (resDesc.resType == cudaResourceTypeArray) {
+			cudaArray_t mem = resDesc.res.array.array;
+			checkCudaErrors(cudaFreeArray(mem));
+		}
 	}
 }
 

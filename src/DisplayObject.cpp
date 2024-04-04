@@ -53,9 +53,12 @@ void DisplayObject::sendToGPU()
 		materialsHost[i] = materials[i]->getGPUMaterial();
 	}
 
-	checkCudaErrors(cudaMalloc((void**)&gpuMeshes, sizeof(GPUMeshData*) * meshes.size()));
-	checkCudaErrors(cudaMalloc((void**)&gpuMaterialIndices, sizeof(int) * meshes.size()));
-	checkCudaErrors(cudaMalloc((void**)&gpuMaterials, sizeof(GPUMaterial*) * materials.size()));
+	if (gpuMeshes == 0) 
+		checkCudaErrors(cudaMalloc((void**)&gpuMeshes, sizeof(GPUMeshData*) * meshes.size()));
+	if (gpuMaterialIndices== 0) 
+		checkCudaErrors(cudaMalloc((void**)&gpuMaterialIndices, sizeof(int) * meshes.size()));
+	if (gpuMaterials == 0) 
+		checkCudaErrors(cudaMalloc((void**)&gpuMaterials, sizeof(GPUMaterial*) * materials.size()));
 
 	checkCudaErrors(cudaMemcpy(gpuMeshes, meshesHost, sizeof(GPUMeshData*) * meshes.size(), cudaMemcpyHostToDevice));
 	checkCudaErrors(cudaMemcpy(gpuMaterialIndices, materialIndicesHost, sizeof(int) * meshes.size(), cudaMemcpyHostToDevice));
@@ -69,7 +72,8 @@ void DisplayObject::sendToGPU()
 	hostData->materialIndices = gpuMaterialIndices;
 	hostData->materials = gpuMaterials;
 
-	checkCudaErrors(cudaMalloc((void**)&gpuData, sizeof(LLGPUObjectData)));
+	if (gpuData == 0) 
+		checkCudaErrors(cudaMalloc((void**)&gpuData, sizeof(LLGPUObjectData)));
 	checkCudaErrors(cudaMemcpy(gpuData, hostData, sizeof(LLGPUObjectData), cudaMemcpyHostToDevice));
 
 	delete hostData;
@@ -144,7 +148,7 @@ void DisplayObject::updateGUI(ImGuiIO& io)
 	{
 		static std::vector<Material*> allMaterials = Material::getAllMaterials();
 
-		if (ImGui::Button("Refresh Full Material List"))
+		if (ImGui::Button("Refresh"))
 		{
 			allMaterials = Material::getAllMaterials();
 		}
