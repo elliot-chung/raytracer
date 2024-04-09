@@ -59,7 +59,7 @@ void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera
 
 
 	// Launch Kernel
-	dim3 blockSize(BLOCK_SIZE, BLOCK_SIZE, MAXIMUM_AA); 
+	dim3 blockSize(BLOCK_SIZE, BLOCK_SIZE, BLOCK_DEPTH); 
 	dim3 gridSize((camSettings.width + blockSize.x - 1) / blockSize.x, (camSettings.height + blockSize.y - 1) / blockSize.y);
 
 	raytraceKernel<<<gridSize, blockSize>>>(camSettings, canvas, objectDataVector, rendererSettings, skyLightSettings);
@@ -78,7 +78,7 @@ void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera
 
 __global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, const GPUObjectDataVector objectDataVector, const RendererParams renderer, const SkyLightParams skylight)
 {
-	__shared__ float4 sharedMemory[BLOCK_SIZE][BLOCK_SIZE][MAXIMUM_AA]; 
+	__shared__ float4 sharedMemory[BLOCK_SIZE][BLOCK_SIZE][BLOCK_DEPTH]; 
 	unsigned int x = blockIdx.x * blockDim.x + threadIdx.x;
 	unsigned int y = blockIdx.y * blockDim.y + threadIdx.y;
 
@@ -86,13 +86,13 @@ __global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, 
 		return;
 
 	float4 color = make_float4(0.0f, 0.0f, 0.0f, 1.0f); 
-	for (int iter = 0; iter < (renderer.sampleCount + MAXIMUM_AA - 1) / MAXIMUM_AA; iter++) 
+	for (int iter = 0; iter < (renderer.sampleCount + BLOCK_DEPTH - 1) / BLOCK_DEPTH; iter++) 
 	{
-		if (iter * MAXIMUM_AA + threadIdx.z >= renderer.sampleCount) break; // Early exit (if sampleCount is not a multiple of MAXIMUM_AA)
+		if (iter * BLOCK_DEPTH + threadIdx.z >= renderer.sampleCount) break; // Early exit (if sampleCount is not a multiple of BLOCK_DEPTH)
 
 		bool isCenter = x == camera.width / 2 && y == camera.height / 2 && threadIdx.z == 0 && iter == 0;
 
-		unsigned int seed = (x + y * camera.width + (iter * MAXIMUM_AA + threadIdx.z) * 34673804 + renderer.frameCount * 719393);
+		unsigned int seed = (x + y * camera.width + (iter * BLOCK_DEPTH + threadIdx.z) * 34673804 + renderer.frameCount * 719393);
 
 		GPURay ray = setupRay(camera, x, y, renderer.bounceCount, renderer.maxDistance, renderer.antiAliasingEnabled, seed);
 
@@ -110,7 +110,7 @@ __global__ void raytraceKernel(CameraParams camera, cudaSurfaceObject_t canvas, 
 
 	if (threadIdx.z == 0) {
 		color = make_float4(0.0f, 0.0f, 0.0f, 1.0f);
-		for (int i = 0; i < MAXIMUM_AA; i++) {
+		for (int i = 0; i < BLOCK_DEPTH; i++) {
 			color.x += sharedMemory[threadIdx.x][threadIdx.y][i].x;
 			color.y += sharedMemory[threadIdx.x][threadIdx.y][i].y;
 			color.z += sharedMemory[threadIdx.x][threadIdx.y][i].z;
@@ -365,10 +365,10 @@ __device__  GPUMaterialPositionData getMaterialData(const GPURayHit& hit)
 {
 	GPUMaterialPositionData output = {};
 	float2 uv = hit.uv;
-	mat4 tbnMatrix = hit.tbnMatrix;
+	mat4 normalTransform = hit.normalTransform;
 
 	output.albedo = hit.material->getAlbedo(uv.x, uv.y);
-	output.normal = normalize(matVecMul(tbnMatrix, hit.material->getNormal(uv.x, uv.y))); 
+	output.normal = normalize(matVecMul(normalTransform, hit.material->getNormal(uv.x, uv.y))); 
 	output.roughness = hit.material->getRoughness(uv.x, uv.y);
 	output.metal = hit.material->getMetal(uv.x, uv.y);
 	output.ao = hit.material->getAmbientOcclusion(uv.x, uv.y);
@@ -516,12 +516,12 @@ __device__ GPURayHit getIntersectionPoint(const GPURay& ray, const GPUObjectData
 		normal = normalize(cross(edge2, edge1));  
 
 	mat4 tbnMatrix = {};
-	tbnMatrix.c0 = make_float4(tangent.x, tangent.y, tangent.z, 0.0f);   
-	tbnMatrix.c1 = make_float4(bitangent.x, bitangent.y, bitangent.z, 0.0f);   
-	tbnMatrix.c2 = make_float4(normal.x, normal.y, normal.z, 0.0f); 
+	tbnMatrix.c0 = make_float4(tangent.x, tangent.y, tangent.z, 0.0f);
+	tbnMatrix.c1 = make_float4(bitangent.x, bitangent.y, bitangent.z, 0.0f);
+	tbnMatrix.c2 = make_float4(normal.x, normal.y, normal.z, 0.0f);
 	tbnMatrix.c3 = make_float4(0.0f, 0.0f, 0.0f, 1.0f);
 
-	mat4 normalTransform = matMul(modelMatrix, tbnMatrix);
+	mat4 nt = matMul(modelMatrix, tbnMatrix);
 
 	float4 interpPosition = make_float4( 
 		v0.x * closestHit.barycentricCoords.x + v1.x * closestHit.barycentricCoords.y + v2.x * closestHit.barycentricCoords.z,
@@ -538,7 +538,7 @@ __device__ GPURayHit getIntersectionPoint(const GPURay& ray, const GPUObjectData
 	output.distance = closestHit.distance;
 	output.hitPosition = interpPosition;
 	output.uv = interpUV;
-	output.tbnMatrix = normalTransform;
+	output.normalTransform = nt;
 	output.material = materials[materialIndices[closestMeshIndex]];
 
 	return output;

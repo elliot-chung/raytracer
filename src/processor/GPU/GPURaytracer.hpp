@@ -16,7 +16,7 @@ void surf2Dwrite(T data, cudaSurfaceObject_t surfObj, int x, int y,
 #endif
 
 #define BLOCK_SIZE 8
-#define MAXIMUM_AA 4
+#define BLOCK_DEPTH 4
 
 
 struct GPURayHit
@@ -28,7 +28,7 @@ struct GPURayHit
 
 	float4 hitPosition;
 	float2 uv;
-	mat4 tbnMatrix;
+	mat4 normalTransform;
 
 	GPUMaterial* material;
 };
