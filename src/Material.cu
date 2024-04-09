@@ -32,7 +32,6 @@ void Material::sendToGPU()
 	if (!availableGPU) return;
 
 	GPUMaterial hostCopy;
-	//memset(&hostCopy, 0, sizeof(GPUMaterial));
 	hostCopy.albedo = make_float4(simpleAlbedo.r, simpleAlbedo.g, simpleAlbedo.b, simpleAlbedo.a); 
 	hostCopy.roughness = make_float3(simpleRoughness.r, simpleRoughness.g, simpleRoughness.b); 
 	hostCopy.metal = make_float3(simpleMetal.r, simpleMetal.g, simpleMetal.b); 
@@ -232,7 +231,8 @@ Texture::~Texture()
 	{
 		if (loadSuccess) delete[] data;
 		textureMap.erase(path);
-
+		
+		if (!gpuTexture) return;
 		cudaResourceDesc resDesc; 
 		checkCudaErrors(cudaGetTextureObjectResourceDesc(&resDesc, gpuTexture)); 
 		checkCudaErrors(cudaDestroyTextureObject(gpuTexture)); 
@@ -244,7 +244,6 @@ Texture::~Texture()
 	}
 }
 
-// TODO: Implement bilinear filtering
 glm::vec4 Texture::sampleTexture(float x, float y)
 {
 	if (x < 0.0f || x > 1.0f || y < 0.0f || y > 1.0f)
@@ -259,14 +258,14 @@ glm::vec4 Texture::sampleTexture(float x, float y)
 		return glm::vec4(data[index], data[index + 1], data[index + 2], data[index + 3]);
 }
 
-__device__ float3 GPUMaterial::getNormal(float x, float y)  
+__device__ float4 GPUMaterial::getNormal(float x, float y)  
 {
 	if (normalTexture == 0)
 		return NORMAL;
 	else
 	{
 		float4 n = tex2D<float4>(normalTexture, x, y);
-		return make_float3(n.x * 2 - 1.0f, n.y * 2 - 1.0f, n.z * 2 - 1.0f);
+		return make_float4(n.x * 2 - 1.0f, n.y * 2 - 1.0f, n.z * 2 - 1.0f, 0.0f);
 	}
 }
 

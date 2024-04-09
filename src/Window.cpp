@@ -229,18 +229,18 @@ void Window::createSurfaceObject()
 
 void Window::renderLoop()
 {
-    
+    /*
     Material mat("test", {0.1f, 0.1f, 0.9f, 1.0f});
     mat.sendToGPU();
 
     Sphere sphere(glm::vec3(0.0f, 0.0f, 0.0f));
     sphere.setMaterialName("test");
     scene->addToScene("Sphere", &sphere);
-    
+    */
 
     //CustomModel model("C:/Users/ec201/OneDrive/Desktop/raytracer/res/basiclowpoly/Airplane.obj");
-    //CustomModel model("C:/Users/ec201/OneDrive/Desktop/raytracer/res/pbrsword/source/murasama.glb");
-    //scene->addToScene("Custom Model", &model);
+    CustomModel model("C:/Users/ec201/OneDrive/Desktop/raytracer/res/pbrsword/source/murasama.glb"); 
+    scene->addToScene("Custom Model", &model); 
 
     //model.setScale(glm::vec3(2.0f, 2.0f, 2.0f));
     // model.setScale(glm::vec3(0.001f, 0.001f, 0.001f));

@@ -28,7 +28,7 @@ struct GPURayHit
 
 	float4 hitPosition;
 	float2 uv;
-	mat3 tbnMatrix;
+	mat4 tbnMatrix;
 
 	GPUMaterial* material;
 };
@@ -132,6 +132,8 @@ __device__ __forceinline__ float4 normalize(const float4 v);
 __device__ __forceinline__ float3 matVecMul(const mat3 m, const float3 v);
 
 __device__ __forceinline__ float4 matVecMul(const mat4 m, const float4 v);
+
+__device__ __forceinline__ mat4 matMul(const mat4 a, const mat4 b);
 
 __device__ __forceinline__ float4 cross(const float4 a, const float4 b);
 

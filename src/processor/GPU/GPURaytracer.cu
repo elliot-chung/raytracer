@@ -184,7 +184,7 @@ __device__ float4 trace(GPURay& ray, const GPUObjectDataVector& objectDataVector
 		}
 		GPUMaterialPositionData materialData = getMaterialData(closestHit); 
 		
-		// Outgoing light only increases on the first hit (ambient occlusion) or when hitting an emissive material
+		// Outgoing light only increases on the first hit (ambient occlusion) 
 		if (i == 0) // First Hit
 		{
 			// Ambient Occlusion
@@ -365,11 +365,10 @@ __device__  GPUMaterialPositionData getMaterialData(const GPURayHit& hit)
 {
 	GPUMaterialPositionData output = {};
 	float2 uv = hit.uv;
-	mat3 tbnMatrix = hit.tbnMatrix;
+	mat4 tbnMatrix = hit.tbnMatrix;
 
 	output.albedo = hit.material->getAlbedo(uv.x, uv.y);
-	float3 normal3 = normalize(matVecMul(tbnMatrix, hit.material->getNormal(uv.x, uv.y))); 
-	output.normal = make_float4(normal3.x, normal3.y, normal3.z, 0.0f);
+	output.normal = normalize(matVecMul(tbnMatrix, hit.material->getNormal(uv.x, uv.y))); 
 	output.roughness = hit.material->getRoughness(uv.x, uv.y);
 	output.metal = hit.material->getMetal(uv.x, uv.y);
 	output.ao = hit.material->getAmbientOcclusion(uv.x, uv.y);
@@ -516,10 +515,13 @@ __device__ GPURayHit getIntersectionPoint(const GPURay& ray, const GPUObjectData
 	else
 		normal = normalize(cross(edge2, edge1));  
 
-	mat3 tbnMatrix = {};
-	tbnMatrix.c0 = make_float3(tangent.x, tangent.y, tangent.z);   
-	tbnMatrix.c1 = make_float3(bitangent.x, bitangent.y, bitangent.z);   
-	tbnMatrix.c2 = make_float3(normal.x, normal.y, normal.z);  
+	mat4 tbnMatrix = {};
+	tbnMatrix.c0 = make_float4(tangent.x, tangent.y, tangent.z, 0.0f);   
+	tbnMatrix.c1 = make_float4(bitangent.x, bitangent.y, bitangent.z, 0.0f);   
+	tbnMatrix.c2 = make_float4(normal.x, normal.y, normal.z, 0.0f); 
+	tbnMatrix.c3 = make_float4(0.0f, 0.0f, 0.0f, 1.0f);
+
+	mat4 normalTransform = matMul(modelMatrix, tbnMatrix);
 
 	float4 interpPosition = make_float4( 
 		v0.x * closestHit.barycentricCoords.x + v1.x * closestHit.barycentricCoords.y + v2.x * closestHit.barycentricCoords.z,
@@ -536,7 +538,7 @@ __device__ GPURayHit getIntersectionPoint(const GPURay& ray, const GPUObjectData
 	output.distance = closestHit.distance;
 	output.hitPosition = interpPosition;
 	output.uv = interpUV;
-	output.tbnMatrix = tbnMatrix;
+	output.tbnMatrix = normalTransform;
 	output.material = materials[materialIndices[closestMeshIndex]];
 
 	return output;
@@ -727,6 +729,32 @@ __device__ __forceinline__ float4 matVecMul(const mat4 m, const float4 v)
 		m.c0.z * v.x + m.c1.z * v.y + m.c2.z * v.z + m.c3.z * v.w,
 		m.c0.w * v.x + m.c1.w * v.y + m.c2.w * v.z + m.c3.w * v.w
 	);
+}
+
+__device__ __forceinline__ mat4 matMul(const mat4 a, const mat4 b)
+{
+	mat4 output = {};
+	output.c0.x = a.c0.x * b.c0.x + a.c1.x * b.c0.y + a.c2.x * b.c0.z + a.c3.x * b.c0.w;
+	output.c0.y = a.c0.y * b.c0.x + a.c1.y * b.c0.y + a.c2.y * b.c0.z + a.c3.y * b.c0.w;
+	output.c0.z = a.c0.z * b.c0.x + a.c1.z * b.c0.y + a.c2.z * b.c0.z + a.c3.z * b.c0.w;
+	output.c0.w = a.c0.w * b.c0.x + a.c1.w * b.c0.y + a.c2.w * b.c0.z + a.c3.w * b.c0.w;
+
+	output.c1.x = a.c0.x * b.c1.x + a.c1.x * b.c1.y + a.c2.x * b.c1.z + a.c3.x * b.c1.w;
+	output.c1.y = a.c0.y * b.c1.x + a.c1.y * b.c1.y + a.c2.y * b.c1.z + a.c3.y * b.c1.w;
+	output.c1.z = a.c0.z * b.c1.x + a.c1.z * b.c1.y + a.c2.z * b.c1.z + a.c3.z * b.c1.w;
+	output.c1.w = a.c0.w * b.c1.x + a.c1.w * b.c1.y + a.c2.w * b.c1.z + a.c3.w * b.c1.w;
+
+	output.c2.x = a.c0.x * b.c2.x + a.c1.x * b.c2.y + a.c2.x * b.c2.z + a.c3.x * b.c2.w;
+	output.c2.y = a.c0.y * b.c2.x + a.c1.y * b.c2.y + a.c2.y * b.c2.z + a.c3.y * b.c2.w;
+	output.c2.z = a.c0.z * b.c2.x + a.c1.z * b.c2.y + a.c2.z * b.c2.z + a.c3.z * b.c2.w;
+	output.c2.w = a.c0.w * b.c2.x + a.c1.w * b.c2.y + a.c2.w * b.c2.z + a.c3.w * b.c2.w;
+
+	output.c3.x = a.c0.x * b.c3.x + a.c1.x * b.c3.y + a.c2.x * b.c3.z + a.c3.x * b.c3.w;
+	output.c3.y = a.c0.y * b.c3.x + a.c1.y * b.c3.y + a.c2.y * b.c3.z + a.c3.y * b.c3.w;
+	output.c3.z = a.c0.z * b.c3.x + a.c1.z * b.c3.y + a.c2.z * b.c3.z + a.c3.z * b.c3.w;
+	output.c3.w = a.c0.w * b.c3.x + a.c1.w * b.c3.y + a.c2.w * b.c3.z + a.c3.w * b.c3.w;
+
+	return output;
 }
 
 __device__ __forceinline__ float4 cross(const float4 a, const float4 b)

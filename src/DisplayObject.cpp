@@ -165,6 +165,7 @@ void DisplayObject::updateGUI(ImGuiIO& io)
 						if (ImGui::Selectable(allMaterials[j]->getName().c_str(), selected))
 						{
 							materials[i] = allMaterials[j];
+							sendToGPU(); 
 						}
 
 						if (selected)

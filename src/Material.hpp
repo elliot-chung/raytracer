@@ -51,7 +51,7 @@ private:
 // -------------------------------------------------------------------------------------------------------- //
 struct GPUMaterial
 {
-	const float3 NORMAL = make_float3(0.0f, 0.0f, 1.0f);
+	const float4 NORMAL = make_float4(0.0f, 0.0f, 1.0f, 0.0f); 
 	const float3 AO = make_float3(1.0f, 1.0f, 1.0f);
 
 	float4 albedo;
@@ -67,7 +67,7 @@ struct GPUMaterial
 	cudaTextureObject_t ambientOcclusionTexture = 0;
 	cudaTextureObject_t emissionTexture = 0;
 
-	__device__  float3 getNormal(float x, float y);
+	__device__  float4 getNormal(float x, float y);
 	__device__  float4 getAlbedo(float x, float y);
 	__device__  float getRoughness(float x, float y);
 	__device__  float getMetal(float x, float y);
@@ -128,7 +128,7 @@ public:
 				ImGui::DragFloat("Roughness", &m.second->simpleRoughness.r, 0.01f, 0.0f, 1.0f);
 				ImGui::DragFloat("Metal", &m.second->simpleMetal.r, 0.01f, 0.0f, 1.0f);
 				ImGui::ColorEdit3("Emission Color", &m.second->simpleEmissionColor.r);
-				ImGui::DragFloat("Emission Strength", &m.second->emissionStrength, 0.01f, 0.0f, 1.0f);
+				ImGui::DragFloat("Emission Strength", &m.second->emissionStrength, 0.01f, 0.0f, 1000000.0f);
 
 				ImGui::TreePop();
 			}
