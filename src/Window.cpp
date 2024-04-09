@@ -239,7 +239,7 @@ void Window::renderLoop()
     */
 
     //CustomModel model("C:/Users/ec201/OneDrive/Desktop/raytracer/res/basiclowpoly/Airplane.obj");
-    CustomModel model("C:/Users/ec201/OneDrive/Desktop/raytracer/res/pbrsword/source/murasama.glb"); 
+    CustomModel model("C:/Users/ec201/OneDrive/Desktop/raytracer/res/pbrsword/source/murasama.fbx"); 
     scene->addToScene("Custom Model", &model); 
 
     //model.setScale(glm::vec3(2.0f, 2.0f, 2.0f));
@@ -332,20 +332,8 @@ Window::~Window()
     glfwTerminate();
 }
 
-inline void flipVertical(unsigned char* image, unsigned int width, unsigned int height, unsigned int channels)
-{
-    unsigned char* temp = new unsigned char[width * channels];
-    for (unsigned int i = 0; i < height / 2; i++)
-    {
-        memcpy(temp, &image[i * width * channels], width * channels);
-        memcpy(&image[i * width * channels], &image[(height - i - 1) * width * channels], width * channels);
-        memcpy(&image[(height - i - 1) * width * channels], temp, width * channels);
-    }
-}
-
 void Window::displayWindowGUI(ImGuiIO& io)
 {
-    static int counter = 1;  // Eventually replace with a timestamp
     static bool progressiveRendering = rtCPU->getProgressiveRendering();
     static bool antiAliasing = (bool)rtCPU->getAntiAliasingEnabled();
 
@@ -406,21 +394,46 @@ void Window::displayWindowGUI(ImGuiIO& io)
         rtGPU->setSkyLight(lightPitch, lightYaw, lightColor, skyColor); 
 	}
 
-    if (ImGui::Button("Take Screenshot"))
-    {
-        unsigned char* pixels = new unsigned char[width * height * 4];
-        glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-
-        flipVertical(pixels, width, height, 4);
-
-        std::string path = "screenshot" + std::to_string(counter++) + ".png";
-        unsigned int error = lodepng::encode(path, pixels, width, height);
-
-        delete[] pixels;
-    }
+    if (ImGui::Button("Take Screenshot")) takeScreenshot(); 
 
     ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
     ImGui::End();
+}
+
+inline void flipVertical(unsigned char* image, unsigned int width, unsigned int height, unsigned int channels)
+{
+    unsigned char* temp = new unsigned char[width * channels];
+    for (unsigned int i = 0; i < height / 2; i++)
+    {
+        memcpy(temp, &image[i * width * channels], width * channels);
+        memcpy(&image[i * width * channels], &image[(height - i - 1) * width * channels], width * channels);
+        memcpy(&image[(height - i - 1) * width * channels], temp, width * channels);
+    }
+}
+
+void Window::takeScreenshot()
+{
+    unsigned char* pixels = new unsigned char[width * height * 4];
+    glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+
+    flipVertical(pixels, width, height, 4);
+
+    // Get the current time
+    auto now = std::chrono::system_clock::now();
+    auto now_c = std::chrono::system_clock::to_time_t(now);
+
+    // Format the current time as a string
+    std::stringstream ss;
+    ss << std::put_time(std::localtime(&now_c), "%Y%m%d%H%M%S");
+    std::string timestamp = ss.str();
+
+    printf("Screenshot saved as screenshot%s.png\n", timestamp.c_str());
+
+    // Create the screenshot filename with the timestamp
+    std::string path = "screenshot" + timestamp + ".png";
+    unsigned int error = lodepng::encode(path, pixels, width, height);
+
+    delete[] pixels;
 }
 
 void Window::keyCallback(int key, int scancode, int action, int mods)

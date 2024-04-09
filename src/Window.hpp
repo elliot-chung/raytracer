@@ -4,14 +4,13 @@
 #include <unordered_map>
 #include <functional>
 #include <memory>
+#include <chrono>
+#include <iomanip>
+#include <sstream>
 
 #include "ImGui/imgui.h"
 #include "ImGui/imgui_impl_glfw.h"
 #include "ImGui/imgui_impl_opengl3.h"
-
-#ifndef __CUDACC__
-#include "glm/gtx/string_cast.hpp"
-#endif
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h> 
@@ -110,5 +109,7 @@ private:
     void displayWindowGUI(ImGuiIO& io);
 
     void createSurfaceObject();
+
+    void takeScreenshot();
     
 };
