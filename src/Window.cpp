@@ -427,10 +427,8 @@ void Window::takeScreenshot()
     ss << std::put_time(std::localtime(&now_c), "%Y%m%d%H%M%S");
     std::string timestamp = ss.str();
 
-    printf("Screenshot saved as screenshot%s.png\n", timestamp.c_str());
-
     // Create the screenshot filename with the timestamp
-    std::string path = "screenshot" + timestamp + ".png";
+    std::string path = timestamp + ".png";
     unsigned int error = lodepng::encode(path, pixels, width, height);
 
     delete[] pixels;
