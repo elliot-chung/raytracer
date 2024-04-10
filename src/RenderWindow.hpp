@@ -41,12 +41,12 @@ typedef const std::function<void(int key, int scancode, int action, int mods)> K
 typedef const std::function<void(double xpos, double ypos)> MouseMoveCallback;
 typedef const std::function<void(int button, int action, int mods)> MouseButtonCallback;
 
-class Window
+class RenderWindow
 {
 public:
-	Window(int width, int height, const char* name);
+	RenderWindow(int width, int height, const char* name);
 
-    ~Window();
+    ~RenderWindow();
 
     int addKeyCallback(const KeyCallback callback);
 

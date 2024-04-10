@@ -151,7 +151,7 @@
     <ClCompile Include="src\processor\CPU\CPURaytracer.cpp" />
     <ClCompile Include="src\processor\CPU\CPURaytracer.hpp" />
     <ClCompile Include="src\Scene.cpp" />
-    <ClCompile Include="src\Window.cpp" />
+    <ClCompile Include="src\RenderWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Cube.hpp" />
@@ -179,7 +179,7 @@
     <ClInclude Include="src\Camera.hpp" />
     <ClInclude Include="src\Sphere.hpp" />
     <ClInclude Include="src\stb_image.h" />
-    <ClInclude Include="src\Window.hpp" />
+    <ClInclude Include="src\RenderWindow.hpp" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="src\Material.cu" />

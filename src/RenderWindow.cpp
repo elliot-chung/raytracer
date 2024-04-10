@@ -1,9 +1,9 @@
-#include "Window.hpp"
+#include "RenderWindow.hpp"
 
 bool usingGPU;
 bool availableGPU;
 
-Window::Window(int width, int height, const char* name)
+RenderWindow::RenderWindow(int width, int height, const char* name)
 {
     this->width = width;
     this->height = height;
@@ -47,25 +47,25 @@ Window::Window(int width, int height, const char* name)
 
         glfwSetKeyCallback(glfwWindow, [](GLFWwindow* window, int key, int scancode, int action, int mods)
             {
-                Window* win = (Window*)glfwGetWindowUserPointer(window);
+                RenderWindow* win = (RenderWindow*)glfwGetWindowUserPointer(window);
                 win->keyCallback(key, scancode, action, mods);
             });
 
         glfwSetCursorPosCallback(glfwWindow, [](GLFWwindow* window, double xpos, double ypos)
             {
-                Window* win = (Window*)glfwGetWindowUserPointer(window);
+                RenderWindow* win = (RenderWindow*)glfwGetWindowUserPointer(window);
                 win->mouseMoveCallback(xpos, ypos);
             });
 
         glfwSetMouseButtonCallback(glfwWindow, [](GLFWwindow* window, int button, int action, int mods)
             {
-				Window* win = (Window*)glfwGetWindowUserPointer(window);
+				RenderWindow* win = (RenderWindow*)glfwGetWindowUserPointer(window);
 				win->mouseButtonCallback(button, action, mods); 
 			});
 
         glfwSetFramebufferSizeCallback(glfwWindow, [](GLFWwindow* window, int width, int height)
             {
-                Window* win = (Window*)glfwGetWindowUserPointer(window);
+                RenderWindow* win = (RenderWindow*)glfwGetWindowUserPointer(window);
                 win->resizeCallback(width, height);
             }); // Set Resize Callback
     }
@@ -163,50 +163,50 @@ Window::Window(int width, int height, const char* name)
     }
 }
 
-inline void Window::updateTexture()
+inline void RenderWindow::updateTexture()
 {
     glBindTexture(GL_TEXTURE_2D, quadTexture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_FLOAT, &data[0]);
 }
-int Window::addKeyCallback(const KeyCallback callback)
+int RenderWindow::addKeyCallback(const KeyCallback callback)
 {
     keyCallbacks.push_back(std::make_pair(true, callback));
     return keyCallbacks.size() - 1;
 }
-int Window::activateKeyCallback(int id)
+int RenderWindow::activateKeyCallback(int id)
 {
     if (id >= keyCallbacks.size()) return -1;
     keyCallbacks[id].first = true;
     return id;
 }
-int Window::deactivateKeyCallback(int id)
+int RenderWindow::deactivateKeyCallback(int id)
 {
     if (id >= keyCallbacks.size()) return -1;
     keyCallbacks[id].first = false;
     return id;
 }
-int Window::addMouseMoveCallback(const MouseMoveCallback callback)
+int RenderWindow::addMouseMoveCallback(const MouseMoveCallback callback)
 {
     mouseMoveCallbacks.push_back(std::make_pair(true, callback));
     return keyCallbacks.size() - 1;
 }
-int Window::activateMouseMoveCallback(int id)
+int RenderWindow::activateMouseMoveCallback(int id)
 {
     if (id >= mouseMoveCallbacks.size()) return -1;
     mouseMoveCallbacks[id].first = true;
     return id;
 }
-int Window::deactivateMouseMoveCallback(int id)
+int RenderWindow::deactivateMouseMoveCallback(int id)
 {
     if (id >= mouseMoveCallbacks.size()) return -1;
     mouseMoveCallbacks[id].first = false;
     return id;
 }
-void Window::clearColorData()
+void RenderWindow::clearColorData()
 {
     data = std::vector<float>(width * height * 4, 0.5f);
 }
-void Window::createSurfaceObject()
+void RenderWindow::createSurfaceObject()
 {
     if (bitmap_surface) checkCudaErrors(cudaDestroySurfaceObject(bitmap_surface));
 
@@ -227,7 +227,7 @@ void Window::createSurfaceObject()
     checkCudaErrors(cudaCreateSurfaceObject(&bitmap_surface, &resDesc));
 }
 
-void Window::renderLoop()
+void RenderWindow::renderLoop()
 {
     /*
     Material mat("test", {0.1f, 0.1f, 0.9f, 1.0f});
@@ -321,7 +321,7 @@ void Window::renderLoop()
     }
 }
 
-Window::~Window()
+RenderWindow::~RenderWindow()
 {
     // Cleanup
     ImGui_ImplOpenGL3_Shutdown();
@@ -332,7 +332,7 @@ Window::~Window()
     glfwTerminate();
 }
 
-void Window::displayWindowGUI(ImGuiIO& io)
+void RenderWindow::displayWindowGUI(ImGuiIO& io)
 {
     static bool progressiveRendering = rtCPU->getProgressiveRendering();
     static bool antiAliasing = (bool)rtCPU->getAntiAliasingEnabled();
@@ -411,7 +411,7 @@ inline void flipVertical(unsigned char* image, unsigned int width, unsigned int 
     }
 }
 
-void Window::takeScreenshot()
+void RenderWindow::takeScreenshot()
 {
     unsigned char* pixels = new unsigned char[width * height * 4];
     glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
@@ -434,28 +434,28 @@ void Window::takeScreenshot()
     delete[] pixels;
 }
 
-void Window::keyCallback(int key, int scancode, int action, int mods)
+void RenderWindow::keyCallback(int key, int scancode, int action, int mods)
 {
     for (auto callback : keyCallbacks)
         if (callback.first)
             callback.second(key, scancode, action, mods);
 }
 
-void Window::mouseMoveCallback(double xpos, double ypos)
+void RenderWindow::mouseMoveCallback(double xpos, double ypos)
 {
     for (auto callback : mouseMoveCallbacks)
         if (callback.first)
             callback.second(xpos, ypos);
 }
 
-void Window::mouseButtonCallback(int button, int action, int mods)
+void RenderWindow::mouseButtonCallback(int button, int action, int mods)
 {
     for (auto callback : mouseButtonCallbacks)
 		if (callback.first)
 			callback.second(button, action, mods);
 }
 
-void Window::resizeCallback(int width, int height)
+void RenderWindow::resizeCallback(int width, int height)
 {
     glViewport(0, 0, width, height);
     this->width = width;
