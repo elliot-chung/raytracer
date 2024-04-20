@@ -76,6 +76,16 @@ struct GPUMaterial
 	__device__  float4 getEmission(float x, float y);
 };
 
+struct MaterialInputBuffers
+{
+	char albedoTexturePath[256];
+	char normalTexturePath[256];
+	char roughnessTexturePath[256];
+	char metalTexturePath[256];
+	char ambientOcclusionTexturePath[256];
+	char emissionTexturePath[256];
+};
+
 class Material;
 typedef std::unordered_map<std::string, Material*> MaterialMap;
 
@@ -135,54 +145,54 @@ public:
 
 				ImGui::Separator();
 				
-				static char albedoTexturePath[256] = "";
-				if (m.second->albedoTexture && strlen(albedoTexturePath) == 0) strncpy(albedoTexturePath, m.second->albedoTexture->getPath().c_str(), 256);
-				ImGui::InputTextWithHint("##Albedo Texture Path", "Albedo Texture Path", albedoTexturePath, 256);
+				char* albedoTexturePath = m.second->materialInputBuffers.albedoTexturePath;
+				std::string label = "##Albedo Texture Path" + m.first;
+				ImGui::InputTextWithHint(label.c_str(), "Albedo Texture Path", albedoTexturePath, 256);
 				ImGui::SameLine();
-				if (ImGui::Button("Set Texture") && m.second->albedoTexture->getPath() != albedoTexturePath)
+				if (ImGui::Button("Set Texture") && (!m.second->albedoTexture || m.second->albedoTexture->getPath() != albedoTexturePath))
 				{
 					m.second->setAlbedoTexture(albedoTexturePath);
 				}
 
-				static char normalTexturePath[256] = "";
-				if (m.second->normalTexture && strlen(normalTexturePath) == 0) strncpy(normalTexturePath, m.second->normalTexture->getPath().c_str(), 256);
-				ImGui::InputTextWithHint("##Normal Texture Path", "Normal Texture Path", normalTexturePath, 256);
+				char* normalTexturePath = m.second->materialInputBuffers.normalTexturePath; 
+				label = "##Normal Texture Path" + m.first;
+				ImGui::InputTextWithHint(label.c_str(), "Normal Texture Path", normalTexturePath, 256);
 				ImGui::SameLine();
 				if (ImGui::Button("Set Texture") && m.second->normalTexture->getPath() != normalTexturePath)
 				{
 					m.second->setNormalTexture(normalTexturePath);
 				}
 
-				static char roughnessTexturePath[256] = "";
-				if (m.second->roughnessTexture && strlen(roughnessTexturePath) == 0) strncpy(roughnessTexturePath, m.second->roughnessTexture->getPath().c_str(), 256);
-				ImGui::InputTextWithHint("##Texture Path", "Roughness Texture Path", roughnessTexturePath, 256);
+				char* roughnessTexturePath = m.second->materialInputBuffers.roughnessTexturePath;
+				label = "##Roughness Texture Path" + m.first;
+				ImGui::InputTextWithHint(label.c_str(), "Roughness Texture Path", roughnessTexturePath, 256);
 				ImGui::SameLine();
 				if (ImGui::Button("Set Texture") && m.second->roughnessTexture->getPath() != roughnessTexturePath) 
 				{
 					m.second->setRoughnessTexture(roughnessTexturePath);
 				}
 
-				static char metalTexturePath[256] = "";
-				if (m.second->metalTexture && strlen(metalTexturePath) == 0) strncpy(metalTexturePath, m.second->metalTexture->getPath().c_str(), 256);
-				ImGui::InputTextWithHint("##Metal Texture Path", "Metal Texture Path", metalTexturePath, 256);
+				char* metalTexturePath = m.second->materialInputBuffers.metalTexturePath;
+				label = "##Metal Texture Path" + m.first;
+				ImGui::InputTextWithHint(label.c_str(), "Metal Texture Path", metalTexturePath, 256);
 				ImGui::SameLine();
 				if (ImGui::Button("Set Texture") && m.second->metalTexture->getPath() != metalTexturePath)
 				{
 					m.second->setMetalTexture(metalTexturePath);
 				}
 
-				static char ambientOcclusionTexturePath[256] = "";
-				if (m.second->ambientOcclusionTexture && strlen(ambientOcclusionTexturePath) == 0) strncpy(ambientOcclusionTexturePath, m.second->ambientOcclusionTexture->getPath().c_str(), 256);
-				ImGui::InputTextWithHint("##Ambient Occlusion Texture Path", "Ambient Occlusion Texture Path", ambientOcclusionTexturePath, 256);
+				char* ambientOcclusionTexturePath = m.second->materialInputBuffers.ambientOcclusionTexturePath;
+				label = "##Ambient Occlusion Texture Path" + m.first;
+				ImGui::InputTextWithHint(label.c_str(), "Ambient Occlusion Texture Path", ambientOcclusionTexturePath, 256);
 				ImGui::SameLine();
 				if (ImGui::Button("Set Texture") && m.second->ambientOcclusionTexture->getPath() != ambientOcclusionTexturePath) 
 				{
 					m.second->setAmbientOcclusionTexture(ambientOcclusionTexturePath);
 				}
 
-				static char emissionTexturePath[256] = "";
-				if (m.second->emissionTexture && strlen(emissionTexturePath) == 0) strncpy(emissionTexturePath, m.second->emissionTexture->getPath().c_str(), 256);
-				ImGui::InputTextWithHint("##Emission Texture Path", "Emission Texture Path", emissionTexturePath, 256);
+				char* emissionTexturePath = m.second->materialInputBuffers.emissionTexturePath;
+				label = "##Emission Texture Path" + m.first;
+				ImGui::InputTextWithHint(label.c_str(), "Emission Texture Path", emissionTexturePath, 256);
 				ImGui::SameLine();
 				if (ImGui::Button("Set Texture") && m.second->emissionTexture->getPath() != emissionTexturePath) 
 				{
@@ -210,6 +220,10 @@ public:
 				{
 					newMaterialName[0] = '\0';
 				}
+				else if (success == 1)
+				{
+					delete m;
+				}	
 			}
 		}
 
@@ -250,7 +264,10 @@ protected:
 
 	bool success = true;
 
+	MaterialInputBuffers materialInputBuffers = {};
+
 	static MaterialMap materialMap;
+	
 };
 
 

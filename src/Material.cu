@@ -50,6 +50,8 @@ void Material::sendToGPU()
 
 Material::~Material()
 {
+	if (!success) return;
+
 	if (normalTexture) delete normalTexture;
 	if (albedoTexture) delete albedoTexture;
 	if (roughnessTexture) delete roughnessTexture;
@@ -108,48 +110,53 @@ glm::vec3 Material::getEmissionColor(float x, float y)
 		return glm::vec3(emissionTexture->sampleTexture(x, y));
 }
 
-inline bool setTextureRef(Texture*& texture, const char* path)
+inline bool setTextureRef(Texture*& texture, const char* path, char* inputBuffer)
 {
-	if (texture != 0) delete texture;
-	texture = new Texture(path);
+	bool emptyPath = path == 0 || path[0] == '\0';
+	Texture* newTexture = emptyPath ? 0 : new Texture(path);
+	bool success = emptyPath || newTexture->getLoadSuccess(); 
 
-	if (!texture->getLoadSuccess())
+	if (success && texture != 0) delete texture;
+
+	if (success)
 	{
-		delete texture;
-		texture = 0;
-		return false;
+		texture = newTexture;
+		strncpy(inputBuffer, path, 256);
 	}
-	return true;
+	else
+		delete newTexture;
+
+	return success;
 }
 
 bool Material::setNormalTexture(const char* path)
 {
-	return setTextureRef(normalTexture, path);
+	return setTextureRef(normalTexture, path, materialInputBuffers.normalTexturePath); 
 }
 
 bool Material::setAlbedoTexture(const char* path)
 {
-	return setTextureRef(albedoTexture, path);
+	return setTextureRef(albedoTexture, path, materialInputBuffers.albedoTexturePath);
 }
 
 bool Material::setRoughnessTexture(const char* path)
 {
-	return setTextureRef(roughnessTexture, path);
+	return setTextureRef(roughnessTexture, path, materialInputBuffers.roughnessTexturePath);
 }
 
 bool Material::setMetalTexture(const char* path)
 {
-	return setTextureRef(metalTexture, path);
+	return setTextureRef(metalTexture, path, materialInputBuffers.metalTexturePath);
 }
 
 bool Material::setAmbientOcclusionTexture(const char* path)
 {
-	return setTextureRef(ambientOcclusionTexture, path);
+	return setTextureRef(ambientOcclusionTexture, path, materialInputBuffers.ambientOcclusionTexturePath);
 }
 
 bool Material::setEmissionTexture(const char* path)
 {
-	return setTextureRef(emissionTexture, path);
+	return setTextureRef(emissionTexture, path, materialInputBuffers.emissionTexturePath);
 }
 
 Texture::Texture(const char* path)
