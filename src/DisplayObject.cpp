@@ -4,6 +4,7 @@ DisplayObject::DisplayObject(glm::vec3 position, glm::quat rotation, glm::vec3 s
 {
 	Position = position;
 	Rotation = rotation;
+	Euler = glm::degrees(glm::eulerAngles(Rotation));
 	Scale = scale;
 }
 
@@ -118,14 +119,14 @@ void DisplayObject::updateGUI(ImGuiIO& io)
 
 	if (ImGui::CollapsingHeader("Transform"))
 	{
-		static glm::vec3 euler = glm::degrees(glm::eulerAngles(Rotation));
-		ImGui::DragFloat3("Position", &Position[0], 0.1f);
-		ImGui::DragFloat3("Rotation", &euler[0], 1.0f, -359.9f, 359.9f);
-		ImGui::DragFloat3("Scale", &Scale[0], 0.1f, 0);
-		if (euler != glm::degrees(glm::eulerAngles(Rotation)))
+		ImGui::DragFloat3("Position", &Position[0], 0.01f);
+		if (ImGui::DragFloat3("Rotation", &Euler[0], 0.1f, -359.9f, 359.9f))
 		{
-			Rotation = glm::quat(glm::radians(euler));
+			Rotation = glm::quat(glm::radians(Euler)); 
 		}
+		ImGui::Text("(% 1.3f, % 1.3f, % 1.3f, % 1.3f)  Quat", Rotation.x, Rotation.y, Rotation.z, Rotation.w);
+		ImGui::DragFloat3("Scale", &Scale[0], 0.01f, 0);
+		
 	}
 
 	if (ImGui::CollapsingHeader("Meshes"))
@@ -135,7 +136,7 @@ void DisplayObject::updateGUI(ImGuiIO& io)
 			ImGui::Text("Mesh %d Material Index: %d", i, meshes[i].second);
 		}
 
-		ImGui::Text("Composite Bounds:");
+		ImGui::Text("Bounds:");
 		ImGui::Text("Max: (%f, %f, %f)", compositeMaxBounds.x, compositeMaxBounds.y, compositeMaxBounds.z);
 		ImGui::Text("Min: (%f, %f, %f)", compositeMinBounds.x, compositeMinBounds.y, compositeMinBounds.z);
 

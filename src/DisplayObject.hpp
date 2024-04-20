@@ -78,6 +78,7 @@ protected:
 
 	glm::vec3 Position;
 	glm::quat Rotation;
+	glm::vec3 Euler;
 	glm::vec3 Scale;
 
 	float3 compositeMaxBounds;
