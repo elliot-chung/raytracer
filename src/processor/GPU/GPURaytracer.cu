@@ -63,7 +63,6 @@ void GPURaytracer::raytrace(std::shared_ptr<Scene> scene, std::shared_ptr<Camera
 	dim3 gridSize((camSettings.width + blockSize.x - 1) / blockSize.x, (camSettings.height + blockSize.y - 1) / blockSize.y);
 
 	raytraceKernel<<<gridSize, blockSize>>>(camSettings, canvas, objectDataVector, rendererSettings, skyLightSettings);
-	checkCudaErrors(cudaPeekAtLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 
 	
@@ -380,6 +379,7 @@ __device__  GPUMaterialPositionData getMaterialData(const GPURayHit& hit)
 __device__ GPURayHit getIntersectionPoint(const GPURay& ray, const GPUObjectData& data)
 {
 	mat4 modelMatrix = data.modelMatrix;
+	mat4 inverseModelMatrix = data.inverseModelMatrix; 
 
 	GPUMeshData* meshData;
 	float* vertices;
@@ -463,6 +463,10 @@ __device__ GPURayHit getIntersectionPoint(const GPURay& ray, const GPUObjectData
 		n0 = make_float4(normals[i0 + 0], normals[i0 + 1], normals[i0 + 2], 0.0f);
 		n1 = make_float4(normals[i1 + 0], normals[i1 + 1], normals[i1 + 2], 0.0f);
 		n2 = make_float4(normals[i2 + 0], normals[i2 + 1], normals[i2 + 2], 0.0f);
+
+		n0 = matVecMul(inverseModelMatrix, n0, true); 
+		n1 = matVecMul(inverseModelMatrix, n1, true); 
+		n2 = matVecMul(inverseModelMatrix, n2, true);  
 	}
 
 	v0 = matVecMul(modelMatrix, v0);
@@ -521,7 +525,7 @@ __device__ GPURayHit getIntersectionPoint(const GPURay& ray, const GPUObjectData
 	tbnMatrix.c2 = make_float4(normal.x, normal.y, normal.z, 0.0f);
 	tbnMatrix.c3 = make_float4(0.0f, 0.0f, 0.0f, 1.0f);
 
-	mat4 nt = matMul(modelMatrix, tbnMatrix);
+	mat4 nt = tbnMatrix;
 
 	float4 interpPosition = make_float4( 
 		v0.x * closestHit.barycentricCoords.x + v1.x * closestHit.barycentricCoords.y + v2.x * closestHit.barycentricCoords.z,
@@ -721,9 +725,16 @@ __device__ __forceinline__ float3 matVecMul(const mat3 m, const float3 v)
 	);
 }
 
-__device__ __forceinline__ float4 matVecMul(const mat4 m, const float4 v)
+__device__ __forceinline__ float4 matVecMul(const mat4 m, const float4 v, const bool transpose)
 {
-	return make_float4(
+	return transpose ? 
+	make_float4(
+		m.c0.x * v.x + m.c0.y * v.y + m.c0.z * v.z + m.c0.w * v.w,
+		m.c1.x * v.x + m.c1.y * v.y + m.c1.z * v.z + m.c1.w * v.w,
+		m.c2.x * v.x + m.c2.y * v.y + m.c2.z * v.z + m.c2.w * v.w,
+		m.c3.x * v.x + m.c3.y * v.y + m.c3.z * v.z + m.c3.w * v.w
+	) :
+	make_float4(
 		m.c0.x * v.x + m.c1.x * v.y + m.c2.x * v.z + m.c3.x * v.w,
 		m.c0.y * v.x + m.c1.y * v.y + m.c2.y * v.z + m.c3.y * v.w,
 		m.c0.z * v.x + m.c1.z * v.y + m.c2.z * v.z + m.c3.z * v.w,
