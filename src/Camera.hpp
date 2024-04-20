@@ -16,7 +16,7 @@
 class Camera
 {
 public:
-    Camera(glm::vec3& position, glm::quat& rotation, float fov, float exposure) : Position(position), Rotation(rotation), verticalFOV(fov), exposureValue(exposure) { }
+    Camera(glm::vec3& position, glm::quat& rotation, float fov, float exposure) : Position(position), Rotation(rotation), verticalFOV(fov), exposureValue(exposure) { Euler = glm::degrees(glm::eulerAngles(Rotation)); }
 
     
     virtual void update(ImGuiIO& io) 
@@ -28,14 +28,13 @@ public:
 
     void updateGUI(ImGuiIO& io)
     {
-        static glm::vec3 euler = glm::degrees(glm::eulerAngles(Rotation));
 		ImGui::Begin("Camera");
         ImGui::DragFloat3("Position", &Position[0], 0.1f);
-        ImGui::DragFloat3("Rotation", &euler[0], 1.0f, -359.9f, 359.9f);
+        if (ImGui::DragFloat3("Rotation", &Euler[0], 1.0f, -359.9f, 359.9f)) 
+        {
+            Rotation = glm::quat(glm::radians(Euler));
+        }
         ImGui::DragFloat("Exposure", &exposureValue, 0.1f, 0.0f);
-        if (euler != glm::degrees(glm::eulerAngles(Rotation))) {
-			Rotation = glm::quat(glm::radians(euler));
-		}
         ImGui::DragFloat("FOV", &verticalFOV, 1.0f, -179.9f, 179.9f);
         if (ImGui::Button("Recalculate Rays")) {
             calcRays();  
@@ -121,6 +120,7 @@ public:
 private:
     glm::vec3 Position;
     glm::quat Rotation;
+    glm::vec3 Euler;
 
     std::vector<glm::vec4> preTransformRays;
     cudaTextureObject_t    cudaPreTransformRays = 0;
