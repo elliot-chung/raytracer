@@ -1,7 +1,13 @@
 #pragma once
 
 #include <unordered_map>
+#include <glm/gtc/quaternion.hpp>
 #include "DisplayObject.hpp"
+
+#include "Cube.hpp"
+//#include "Sphere.hpp"
+//#include "CustomModel.hpp"
+
 #include "linal.hpp"
 
 struct GPUObjectData
@@ -69,6 +75,51 @@ public:
 			if (ImGui::Selectable(object.first.c_str()))
 			{
 				object.second->toggleSelect();
+			}
+		}
+		ImGui::Separator();
+		if (ImGui::Button("Add Object"))
+			ImGui::OpenPopup("Add Object");
+		if (ImGui::BeginPopup("Add Object"))
+		{
+			static int item = 0;
+			static const char* items[] = { "Cube", "Sphere", "Custom Model" };
+			ImGui::Combo("Type", &item, items, IM_ARRAYSIZE(items));
+
+			static glm::vec3 position(0);
+			static glm::quat rotation(1, 0, 0, 0); 
+			static glm::vec3 euler(0); 
+			static glm::vec3 scale(1);
+			ImGui::DragFloat3("Position", &position[0], 0.1f);
+			ImGui::DragFloat3("Rotation", &euler[0], 1.0f, -359.9f, 359.9f);
+			ImGui::DragFloat3("Scale", &scale[0], 0.1f); 
+			rotation = glm::quat(glm::radians(euler)); 
+
+
+			static int cubeCount = 0;
+			static int sphereCount = 0;
+			static int customModelCount = 0;
+
+			switch (item)
+			{
+			case 0:
+				if (ImGui::Button("Add Cube"))
+				{
+					std::string name = "Cube " + std::to_string(cubeCount++);
+					Cube* cube = new Cube(position, rotation, scale);
+					cube->setMaterialName("Material");
+					cube->sendToGPU(); 
+					addToScene(name, cube); 
+					ImGui::CloseCurrentPopup();
+				}
+				break;
+			case 1:
+				if (ImGui::Button("Add Sphere"))
+				{
+					//addToScene("Sphere", new Sphere());
+					ImGui::CloseCurrentPopup();
+				}
+				break;
 			}
 		}
 		ImGui::End();
