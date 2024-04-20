@@ -33,7 +33,7 @@ public:
 	static inline Texture* getTexture(char const* path) { return textureMap[path].second; }
 
 private:
-	std::string path;
+	std::string path = "";
 
 	int width;
 	int height;
@@ -48,7 +48,6 @@ private:
 
 	static TextureMap textureMap;
 };
-
 
 // -------------------------------------------------------------------------------------------------------- //
 struct GPUMaterial

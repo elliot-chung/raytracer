@@ -137,7 +137,7 @@ void CustomModel::processAllMeshes(const aiScene* scene)
 
 		meshes.push_back(std::pair(processMesh(mesh), mesh->mMaterialIndex));
 	}
-	if (scene->mNumMeshes > 0) this->isComposite = true;
+	if (scene->mNumMeshes > 1) this->isComposite = true;
 	updateCompositeBounds();
 }
 
