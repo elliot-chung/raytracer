@@ -136,9 +136,13 @@ void DisplayObject::updateGUI(ImGuiIO& io)
 			ImGui::Text("Mesh %d Material Index: %d", i, meshes[i].second);
 		}
 
+		ImGui::Separator();
+
 		ImGui::Text("Bounds:");
 		ImGui::Text("Max: (%f, %f, %f)", compositeMaxBounds.x, compositeMaxBounds.y, compositeMaxBounds.z);
 		ImGui::Text("Min: (%f, %f, %f)", compositeMinBounds.x, compositeMinBounds.y, compositeMinBounds.z);
+
+		ImGui::Separator(); 
 
 		ImGui::Text("Is Composite: %s", isComposite ? "True" : "False");
 	}
@@ -158,7 +162,8 @@ void DisplayObject::updateGUI(ImGuiIO& io)
 		{
 			if (ImGui::TreeNode((void*)(intptr_t)i, "Material %d", i))
 			{
-				if (ImGui::BeginCombo(" ", materials[i]->getName().c_str(), ImGuiComboFlags_PopupAlignLeft))
+				std::string name = materials[i]->getName();
+				if (ImGui::BeginCombo(("##" + name).c_str(), name.c_str(), ImGuiComboFlags_PopupAlignLeft))
 				{
 					for (int j = 0; j < allMaterials.size(); j++)
 					{
