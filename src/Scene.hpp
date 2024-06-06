@@ -91,9 +91,12 @@ public:
 			static glm::vec3 euler(0); 
 			static glm::vec3 scale(1);
 			ImGui::DragFloat3("Position", &position[0], 0.1f);
-			ImGui::DragFloat3("Rotation", &euler[0], 1.0f, -359.9f, 359.9f);
+			if (ImGui::DragFloat3("Rotation", &euler[0], 1.0f, -359.9f, 359.9f))
+			{
+				rotation = glm::quat(glm::radians(euler)); 
+			}
 			ImGui::DragFloat3("Scale", &scale[0], 0.1f); 
-			rotation = glm::quat(glm::radians(euler)); 
+			
 
 
 			static int cubeCount = 0;
