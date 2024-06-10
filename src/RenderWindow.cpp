@@ -161,6 +161,12 @@ RenderWindow::RenderWindow(int width, int height, const char* name)
         camera->setHeight(height);
         camera->setWidth(width);
     }
+
+    // Default Material
+    {
+        defaultMaterial = std::make_unique<Material>("Default", glm::vec4(0.5f, 0.5f, 0.5f, 1.0f)); 
+        defaultMaterial->sendToGPU();
+    }
 }
 
 inline void RenderWindow::updateTexture()
@@ -229,14 +235,10 @@ void RenderWindow::createSurfaceObject()
 
 void RenderWindow::renderLoop()
 {
-    /*
-    Material mat("test", {0.1f, 0.1f, 0.9f, 1.0f});
-    mat.sendToGPU();
-
-    Sphere sphere(glm::vec3(0.0f, 0.0f, 0.0f));
-    sphere.setMaterialName("test");
-    scene->addToScene("Sphere", &sphere);
-    */
+    //Cube sphere(glm::vec3(0.0f, 0.0f, 0.0f));
+    //sphere.setMaterialName("test");
+    //scene->addToScene("Sphere", &sphere);
+    
 
     //CustomModel model("C:/Users/ec201/OneDrive/Desktop/raytracer/res/basiclowpoly/Airplane.obj");
     CustomModel model("C:/Users/ec201/OneDrive/Desktop/raytracer/res/pbrsword/source/murasama.fbx"); 

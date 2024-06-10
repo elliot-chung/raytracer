@@ -78,6 +78,7 @@ private:
     std::unique_ptr<Shader> screenShader;
     std::unique_ptr<CPURaytracer> rtCPU;
     std::unique_ptr<GPURaytracer> rtGPU;
+    std::unique_ptr<Material> defaultMaterial;
     std::shared_ptr<Camera> camera;
     std::shared_ptr<Scene> scene;
 

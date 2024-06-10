@@ -126,115 +126,150 @@ public:
 	{
 		ImGui::Begin("Materials");
 
-		for (auto& m : materialMap)
-		{
-			if (ImGui::TreeNode(m.first.c_str()))
+		{ // Material Editor
+			// Material Selector List
+			static Material* selectedMaterial = 0;
+			static std::string selectedMaterialName = "";
+			static std::string comboLabel = "##Material Selector";
+			
+			
+			if (ImGui::BeginCombo(comboLabel.c_str(), selectedMaterialName.c_str(), ImGuiComboFlags_PopupAlignLeft)) 
 			{
-				if (ImGui::Button("Send to GPU"))
+				for (auto& m : materialMap)
 				{
-					m.second->sendToGPU();
+					bool isSelected = selectedMaterialName == m.first;
+					if (ImGui::Selectable(m.first.c_str(), isSelected))
+					{
+						selectedMaterial = m.second; 
+						selectedMaterialName = m.first;
+					}
 				}
+				ImGui::EndCombo();
+			}
+
+			ImGui::Separator();
+
+			if (selectedMaterial)
+			{
+				// Material Options
+				if (ImGui::ColorEdit3("Albedo", &selectedMaterial->simpleAlbedo.r)) selectedMaterial->sendToGPU();
+				if (ImGui::DragFloat("Roughness", &selectedMaterial->simpleRoughness.r, 0.01f, 0.0f, 1.0f)) selectedMaterial->sendToGPU();
+				if (ImGui::DragFloat("Metal", &selectedMaterial->simpleMetal.r, 0.01f, 0.0f, 1.0f)) selectedMaterial->sendToGPU();
+				if (ImGui::ColorEdit3("Emission Color", &selectedMaterial->simpleEmissionColor.r)) selectedMaterial->sendToGPU();
+				if (ImGui::DragFloat("Emission Strength", &selectedMaterial->emissionStrength, 0.01f, 0.0f, 1000000.0f)) selectedMaterial->sendToGPU();
 
 				ImGui::Separator();
 
-				ImGui::ColorEdit3("Albedo", &m.second->simpleAlbedo.r);
-				ImGui::DragFloat("Roughness", &m.second->simpleRoughness.r, 0.01f, 0.0f, 1.0f);
-				ImGui::DragFloat("Metal", &m.second->simpleMetal.r, 0.01f, 0.0f, 1.0f);
-				ImGui::ColorEdit3("Emission Color", &m.second->simpleEmissionColor.r);
-				ImGui::DragFloat("Emission Strength", &m.second->emissionStrength, 0.01f, 0.0f, 1000000.0f);
-
-				ImGui::Separator();
-				
-				char* albedoTexturePath = m.second->materialInputBuffers.albedoTexturePath;
-				std::string label = "##Albedo Texture Path" + m.first;
-				ImGui::InputTextWithHint(label.c_str(), "Albedo Texture Path", albedoTexturePath, 256);
+				char* albedoTexturePath = selectedMaterial->materialInputBuffers.albedoTexturePath;
+				std::string albedolabel = "##Albedo Texture Path" + selectedMaterialName;
+				ImGui::InputTextWithHint(albedolabel.c_str(), "Albedo Texture Path", albedoTexturePath, 256);
 				ImGui::SameLine();
-				if (ImGui::Button("Set Texture") && (!m.second->albedoTexture || m.second->albedoTexture->getPath() != albedoTexturePath))
+				if (ImGui::Button("Set Texture##Albedo") && (!selectedMaterial->albedoTexture || selectedMaterial->albedoTexture->getPath() != albedoTexturePath))
 				{
-					m.second->setAlbedoTexture(albedoTexturePath);
+					if (selectedMaterial->setAlbedoTexture(albedoTexturePath))
+						selectedMaterial->sendToGPU();
+					else
+						strcpy(albedoTexturePath, selectedMaterial->albedoTexture->getPath().c_str());
 				}
 
-				char* normalTexturePath = m.second->materialInputBuffers.normalTexturePath; 
-				label = "##Normal Texture Path" + m.first;
-				ImGui::InputTextWithHint(label.c_str(), "Normal Texture Path", normalTexturePath, 256);
+				char* normalTexturePath = selectedMaterial->materialInputBuffers.normalTexturePath;
+				std::string normallabel = "##Normal Texture Path" + selectedMaterialName;
+				ImGui::InputTextWithHint(normallabel.c_str(), "Normal Texture Path", normalTexturePath, 256);
 				ImGui::SameLine();
-				if (ImGui::Button("Set Texture") && m.second->normalTexture->getPath() != normalTexturePath)
+				if (ImGui::Button("Set Texture##Normal") && (!selectedMaterial->normalTexture || selectedMaterial->normalTexture->getPath() != normalTexturePath))
 				{
-					m.second->setNormalTexture(normalTexturePath);
+					if (selectedMaterial->setNormalTexture(normalTexturePath))
+						selectedMaterial->sendToGPU();
+					else
+						strcpy(normalTexturePath, selectedMaterial->normalTexture->getPath().c_str());
 				}
 
-				char* roughnessTexturePath = m.second->materialInputBuffers.roughnessTexturePath;
-				label = "##Roughness Texture Path" + m.first;
-				ImGui::InputTextWithHint(label.c_str(), "Roughness Texture Path", roughnessTexturePath, 256);
+				char* roughnessTexturePath = selectedMaterial->materialInputBuffers.roughnessTexturePath;
+				std::string roughlabel = "##Roughness Texture Path" + selectedMaterialName;
+				ImGui::InputTextWithHint(roughlabel.c_str(), "Roughness Texture Path", roughnessTexturePath, 256);
 				ImGui::SameLine();
-				if (ImGui::Button("Set Texture") && m.second->roughnessTexture->getPath() != roughnessTexturePath) 
+				if (ImGui::Button("Set Texture##Roughness") && (!selectedMaterial->roughnessTexture || selectedMaterial->roughnessTexture->getPath() != roughnessTexturePath))
 				{
-					m.second->setRoughnessTexture(roughnessTexturePath);
+					if (selectedMaterial->setRoughnessTexture(roughnessTexturePath))
+						selectedMaterial->sendToGPU();
+					else
+						strcpy(roughnessTexturePath, selectedMaterial->roughnessTexture->getPath().c_str());
 				}
 
-				char* metalTexturePath = m.second->materialInputBuffers.metalTexturePath;
-				label = "##Metal Texture Path" + m.first;
+				char* metalTexturePath = selectedMaterial->materialInputBuffers.metalTexturePath;
+				std::string label = "##Metal Texture Path" + selectedMaterialName;
 				ImGui::InputTextWithHint(label.c_str(), "Metal Texture Path", metalTexturePath, 256);
 				ImGui::SameLine();
-				if (ImGui::Button("Set Texture") && m.second->metalTexture->getPath() != metalTexturePath)
+				if (ImGui::Button("Set Texture##Metal") && (!selectedMaterial->metalTexture || selectedMaterial->metalTexture->getPath() != metalTexturePath))
 				{
-					m.second->setMetalTexture(metalTexturePath);
+					if (selectedMaterial->setMetalTexture(metalTexturePath))
+						selectedMaterial->sendToGPU();
+					else
+						strcpy(metalTexturePath, selectedMaterial->metalTexture->getPath().c_str());
 				}
 
-				char* ambientOcclusionTexturePath = m.second->materialInputBuffers.ambientOcclusionTexturePath;
-				label = "##Ambient Occlusion Texture Path" + m.first;
+				char* ambientOcclusionTexturePath = selectedMaterial->materialInputBuffers.ambientOcclusionTexturePath;
+				label = "##Ambient Occlusion Texture Path" + selectedMaterialName;
 				ImGui::InputTextWithHint(label.c_str(), "Ambient Occlusion Texture Path", ambientOcclusionTexturePath, 256);
 				ImGui::SameLine();
-				if (ImGui::Button("Set Texture") && m.second->ambientOcclusionTexture->getPath() != ambientOcclusionTexturePath) 
+				if (ImGui::Button("Set Texture##Ambient") && (!selectedMaterial->ambientOcclusionTexture || selectedMaterial->ambientOcclusionTexture->getPath() != ambientOcclusionTexturePath))
 				{
-					m.second->setAmbientOcclusionTexture(ambientOcclusionTexturePath);
+					if (selectedMaterial->setAmbientOcclusionTexture(ambientOcclusionTexturePath))
+						selectedMaterial->sendToGPU();
+					else
+						strcpy(ambientOcclusionTexturePath, selectedMaterial->ambientOcclusionTexture->getPath().c_str());
 				}
 
-				char* emissionTexturePath = m.second->materialInputBuffers.emissionTexturePath;
-				label = "##Emission Texture Path" + m.first;
+				char* emissionTexturePath = selectedMaterial->materialInputBuffers.emissionTexturePath;
+				label = "##Emission Texture Path" + selectedMaterialName;
 				ImGui::InputTextWithHint(label.c_str(), "Emission Texture Path", emissionTexturePath, 256);
 				ImGui::SameLine();
-				if (ImGui::Button("Set Texture") && m.second->emissionTexture->getPath() != emissionTexturePath) 
+				if (ImGui::Button("Set Texture##Emission") && (!selectedMaterial->emissionTexture || selectedMaterial->emissionTexture->getPath() != emissionTexturePath))
 				{
-					m.second->setEmissionTexture(emissionTexturePath);
+					if (selectedMaterial->setEmissionTexture(emissionTexturePath))
+						selectedMaterial->sendToGPU();
+					else
+						strcpy(emissionTexturePath, selectedMaterial->emissionTexture->getPath().c_str());
 				}
-				
-
-				ImGui::TreePop();
 			}
+			
 		}
+
+
 		ImGui::Separator();
-		static char newMaterialName[256] = "";
-		ImGui::InputTextWithHint("##New Material Name", "New Material Name", newMaterialName, IM_ARRAYSIZE(newMaterialName));
-		ImGui::SameLine();
-		static int success = 0;
-		if (ImGui::Button("Add Material"))
-		{
-			if (strlen(newMaterialName) == 0)
-				success = 2;
-			else
+		{ // Add Material
+			static char newMaterialName[256] = "";
+			ImGui::InputTextWithHint("##New Material Name", "New Material Name", newMaterialName, IM_ARRAYSIZE(newMaterialName));
+			ImGui::SameLine();
+			static int success = 0;
+			if (ImGui::Button("Add Material"))
 			{
-				Material* m = new Material(newMaterialName);
-				success = (int)!m->getSuccess();
-				if (success == 0)
+				if (strlen(newMaterialName) == 0)
+					success = 2;
+				else
 				{
-					newMaterialName[0] = '\0';
+					Material* m = new Material(newMaterialName);
+					success = (int)!m->getSuccess();
+					if (success == 0)
+					{
+						newMaterialName[0] = '\0';
+					}
+					else if (success == 1)
+					{
+						delete m;
+					}
 				}
-				else if (success == 1)
-				{
-					delete m;
-				}	
 			}
-		}
 
-		switch (success)
-        {
-		case 1:
-			ImGui::Text("Material name already exists!"); 
-			break;
-		case 2:
-			ImGui::Text("Material name cannot be empty!");
-			break;
+			switch (success)
+			{
+			case 1:
+				ImGui::Text("Material name already exists!");
+				break;
+			case 2:
+				ImGui::Text("Material name cannot be empty!");
+				break;
+			}
 		}
 
 		ImGui::End();

@@ -134,6 +134,7 @@
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\Cube.cpp" />
     <ClCompile Include="src\CustomModel.cpp" />
     <ClCompile Include="src\CustomModel.hpp" />
     <ClCompile Include="src\DisplayObject.cpp" />

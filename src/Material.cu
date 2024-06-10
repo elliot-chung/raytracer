@@ -115,9 +115,9 @@ inline bool setTextureRef(Texture*& texture, const char* path, char* inputBuffer
 	bool emptyPath = path == 0 || path[0] == '\0';
 	Texture* newTexture = emptyPath ? 0 : new Texture(path);
 	bool success = emptyPath || newTexture->getLoadSuccess(); 
-
+	
 	if (success && texture != 0) delete texture;
-
+	
 	if (success)
 	{
 		texture = newTexture;
