@@ -5,8 +5,8 @@
 #include "DisplayObject.hpp"
 
 #include "Cube.hpp"
-//#include "Sphere.hpp"
-//#include "CustomModel.hpp"
+#include "Sphere.hpp"
+#include "CustomModel.hpp"
 
 #include "linal.hpp"
 
@@ -52,7 +52,7 @@ public:
 		return false;
 	}
 
-	bool removeFromSceen(const char* name, DisplayObject* object)
+	bool removeFromSceen(std::string name)
 	{
 		return (bool) objectMap.erase(name);
 	}
@@ -69,11 +69,19 @@ public:
 	void updateGUI(ImGuiIO& io)
 	{
 		ImGui::Begin("Scene");
+		static bool deleteMode = false;
+		ImGui::Checkbox("Delete Mode", &deleteMode);
 		for (auto& object : objectMap)
 		{
 			// Selectable list of objects
 			if (ImGui::Selectable(object.first.c_str()))
 			{
+				if (deleteMode)
+				{
+					delete object.second;
+					objectMap.erase(object.first);
+					break;
+				}
 				object.second->toggleSelect();
 			}
 		}
@@ -96,34 +104,61 @@ public:
 				rotation = glm::quat(glm::radians(euler)); 
 			}
 			ImGui::DragFloat3("Scale", &scale[0], 0.1f); 
-			
 
 
-			static int cubeCount = 0;
-			static int sphereCount = 0;
-			static int customModelCount = 0;
+			static DisplayObject* newobj; 
 
-			switch (item)
+			static char pathbuffer[256] = ""; 
+			static char namebuffer[256] = ""; 
+
+			ImGui::InputText("Name", namebuffer, IM_ARRAYSIZE(namebuffer));
+			if (item == 2) ImGui::InputText("Path", pathbuffer, IM_ARRAYSIZE(pathbuffer));
+
+			if (ImGui::Button("Add Object"))
 			{
-			case 0:
-				if (ImGui::Button("Add Cube"))
+				switch (item)
 				{
-					std::string name = "Cube " + std::to_string(cubeCount++);
-					Cube* cube = new Cube(position, rotation, scale);
-					cube->setMaterialName("Material");
-					cube->sendToGPU(); 
-					addToScene(name, cube); 
-					ImGui::CloseCurrentPopup();
+					case 0:
+					{
+
+						newobj = new Cube(position, rotation, scale);
+						break;
+					}
+					case 1:
+					{
+						newobj = new Sphere(position, rotation, scale);
+						break;
+					}
+					case 2:
+					{
+						newobj = new CustomModel(std::string(pathbuffer), position, rotation, scale);
+						break;
+					}
 				}
-				break;
-			case 1:
-				if (ImGui::Button("Add Sphere"))
+				if (newobj->getLoadSuccess())
 				{
-					//addToScene("Sphere", new Sphere());
-					ImGui::CloseCurrentPopup();
+					newobj->setMaterialName("Default"); 
+					newobj->sendToGPU();
+					if (strlen(namebuffer) != 0 && addToScene(std::string(namebuffer), newobj))
+					{
+						printf("Added object %s\n", namebuffer);
+						ImGui::CloseCurrentPopup(); 
+					}
+					else
+					{
+						printf("Failed to add object %s\n", namebuffer); 
+						delete newobj; 
+					}
 				}
-				break;
+				else
+				{
+					printf("Failed to load model\n");
+					delete newobj; 
+				}
+				
 			}
+
+
 		}
 		ImGui::End();
 	}

@@ -64,13 +64,15 @@ public:
 	inline void select() { selectedObject = this; }
 	inline void deselect() { if (this == selectedObject) selectedObject = 0; }
 	inline void toggleSelect() { if (this == selectedObject) selectedObject = 0; else selectedObject = this; } 
+	
+	inline bool getLoadSuccess() { return loadSuccess; }
 
 	void sendToGPU();
 
 	static void displaySelectedObjectGUI(ImGuiIO& io)
 	{
 		ImGui::Begin("Selected Object");
-		if (selectedObject) selectedObject->updateGUI(io); 
+		if (selectedObject) selectedObject->updateGUI(io);
 		else ImGui::Text("No object selected");
 		ImGui::End();
 	}
@@ -88,6 +90,7 @@ protected:
 	std::vector<Material*> materials;
 
 	bool isComposite = false;
+	bool loadSuccess = false;
 
 	static DisplayObject* selectedObject;
 

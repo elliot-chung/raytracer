@@ -169,7 +169,7 @@ public:
 					if (selectedMaterial->setAlbedoTexture(albedoTexturePath))
 						selectedMaterial->sendToGPU();
 					else
-						strcpy(albedoTexturePath, selectedMaterial->albedoTexture->getPath().c_str());
+						strcpy(albedoTexturePath, (selectedMaterial->albedoTexture ? selectedMaterial->albedoTexture->getPath().c_str() : "")); 
 				}
 
 				char* normalTexturePath = selectedMaterial->materialInputBuffers.normalTexturePath;
@@ -181,7 +181,7 @@ public:
 					if (selectedMaterial->setNormalTexture(normalTexturePath))
 						selectedMaterial->sendToGPU();
 					else
-						strcpy(normalTexturePath, selectedMaterial->normalTexture->getPath().c_str());
+						strcpy(normalTexturePath, (selectedMaterial->normalTexture ? selectedMaterial->normalTexture->getPath().c_str() : ""));
 				}
 
 				char* roughnessTexturePath = selectedMaterial->materialInputBuffers.roughnessTexturePath;
@@ -193,7 +193,7 @@ public:
 					if (selectedMaterial->setRoughnessTexture(roughnessTexturePath))
 						selectedMaterial->sendToGPU();
 					else
-						strcpy(roughnessTexturePath, selectedMaterial->roughnessTexture->getPath().c_str());
+						strcpy(roughnessTexturePath, (selectedMaterial->roughnessTexture ? selectedMaterial->roughnessTexture->getPath().c_str() : ""));
 				}
 
 				char* metalTexturePath = selectedMaterial->materialInputBuffers.metalTexturePath;
@@ -205,7 +205,7 @@ public:
 					if (selectedMaterial->setMetalTexture(metalTexturePath))
 						selectedMaterial->sendToGPU();
 					else
-						strcpy(metalTexturePath, selectedMaterial->metalTexture->getPath().c_str());
+						strcpy(metalTexturePath, (selectedMaterial->metalTexture ? selectedMaterial->metalTexture->getPath().c_str() : ""));
 				}
 
 				char* ambientOcclusionTexturePath = selectedMaterial->materialInputBuffers.ambientOcclusionTexturePath;
@@ -217,7 +217,7 @@ public:
 					if (selectedMaterial->setAmbientOcclusionTexture(ambientOcclusionTexturePath))
 						selectedMaterial->sendToGPU();
 					else
-						strcpy(ambientOcclusionTexturePath, selectedMaterial->ambientOcclusionTexture->getPath().c_str());
+						strcpy(ambientOcclusionTexturePath, (selectedMaterial->ambientOcclusionTexture ? selectedMaterial->ambientOcclusionTexture->getPath().c_str() : ""));
 				}
 
 				char* emissionTexturePath = selectedMaterial->materialInputBuffers.emissionTexturePath;
@@ -229,7 +229,7 @@ public:
 					if (selectedMaterial->setEmissionTexture(emissionTexturePath))
 						selectedMaterial->sendToGPU();
 					else
-						strcpy(emissionTexturePath, selectedMaterial->emissionTexture->getPath().c_str());
+						strcpy(emissionTexturePath, (selectedMaterial->emissionTexture ? selectedMaterial->emissionTexture->getPath().c_str() : ""));
 				}
 			}
 			
@@ -253,6 +253,7 @@ public:
 					if (success == 0)
 					{
 						newMaterialName[0] = '\0';
+						m->sendToGPU();
 					}
 					else if (success == 1)
 					{

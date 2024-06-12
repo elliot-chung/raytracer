@@ -13,6 +13,8 @@ CustomModel::CustomModel(std::string path,
 
 		copyHostLLData(customModels[path].first);
 
+		loadSuccess = customModels[path].first->loadSuccess;
+
 		return;
 	}
 
@@ -49,13 +51,14 @@ void CustomModel::loadModel(std::string path)
 
 	if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
 	{
-		printf("ERROR::ASSIMP::%s", importer.GetErrorString());
+		loadSuccess = false;
 		return;
 	}
 
 	processAllMaterials(scene);
 	processAllMeshes(scene);
 	updateCompositeBounds();
+	loadSuccess = true;
 }
 
 void CustomModel::processAllMaterials(const aiScene* scene) 

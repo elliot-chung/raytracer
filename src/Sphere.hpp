@@ -126,7 +126,9 @@ public:
 
 	    
 		static Mesh sMesh(vertices, indices, uvCoords, normals);  
-		meshes.push_back(std::pair(&sMesh, 0)); 
+		meshes.push_back(std::pair<Mesh*, int>(&sMesh, 0)); 
 		updateCompositeBounds();
+
+		loadSuccess = true;
 	}
 };

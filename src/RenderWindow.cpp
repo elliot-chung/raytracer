@@ -235,22 +235,6 @@ void RenderWindow::createSurfaceObject()
 
 void RenderWindow::renderLoop()
 {
-    //Cube sphere(glm::vec3(0.0f, 0.0f, 0.0f));
-    //sphere.setMaterialName("test");
-    //scene->addToScene("Sphere", &sphere);
-    
-
-    //CustomModel model("C:/Users/ec201/OneDrive/Desktop/raytracer/res/basiclowpoly/Airplane.obj");
-    CustomModel model("C:/Users/ec201/OneDrive/Desktop/raytracer/res/pbrsword/source/murasama.fbx"); 
-    scene->addToScene("Custom Model", &model); 
-
-    //model.setScale(glm::vec3(2.0f, 2.0f, 2.0f));
-    // model.setScale(glm::vec3(0.001f, 0.001f, 0.001f));
-    //glm::quat rotation = glm::quat(glm::vec3(glm::radians(-90.0f), 0.0f, 0.0f));
-    //model.setRotation(rotation);
-
-    scene->sendToGPU();
-
     ImGuiIO& io = ImGui::GetIO();
 
     while (!glfwWindowShouldClose(glfwWindow))
