@@ -1,4 +1,8 @@
 # CUDA Raytracer Project
+This project is a C++/CUDA application for loading a 3D model and rendering it using a path tracing algorithm. The application allows for basic manipulation of the camera and positioning of the loaded objects. 
+
+## Example Renders
+
 
 ## Building the Project
 
