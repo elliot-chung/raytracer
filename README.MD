@@ -2,6 +2,9 @@
 This project is a C++/CUDA application for loading a 3D model and rendering it using a path tracing algorithm. The application allows for basic manipulation of the camera and positioning of the loaded objects. 
 
 ## Example Renders
+![Sword Render 1](raytracer/20240610102036.png)
+
+![Sword Render 2](raytracer/20240610102209.png)
 
 
 ## Building the Project
