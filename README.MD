@@ -7,8 +7,9 @@ A C++/CUDA path tracer with an OpenGL display front-end, built to demonstrate co
 ## Example Renders
 
 <p align="center">
-  <img src="20240610102036.png" alt="Sword Render 1" width="49%" />
-  <img src="20240610102209.png" alt="Sword Render 2" width="49%" />
+  <img src="20240610102036.png" alt="Sword Render 1" width="32%" />
+  <img src="20240610102209.png" alt="Sword Render 2" width="32%" />
+  <img src="20260623222634.png" alt="Cone Render" width="32%" />
 </p>
 
 ---
@@ -24,6 +25,7 @@ A C++/CUDA path tracer with an OpenGL display front-end, built to demonstrate co
 ## Graphics Concepts Implemented
 
 ### Path tracing and sampling
+
 - **Path tracing** with configurable bounce count and max ray distance.
 - **Per-pixel multi-sampling** with optional jitter (anti-aliasing); samples are accumulated and averaged.
 - **Progressive refinement**: in GPU mode, frames can be accumulated over time (running average with previous frame) for cleaner convergence.
@@ -31,6 +33,7 @@ A C++/CUDA path tracer with an OpenGL display front-end, built to demonstrate co
 - **HDR exposure**: result is tone-mapped with `1 - exp(-color * exposure)` before display.
 
 ### PBR (Cook–Torrance BRDF)
+
 - **Cook–Torrance** microfacet model:
   - **GGX** (Trowbridge–Reitz) normal distribution.
   - **Smith** geometry term (Schlick-GGX for visibility).
@@ -38,15 +41,18 @@ A C++/CUDA path tracer with an OpenGL display front-end, built to demonstrate co
 - **Metalness/roughness workflow**: albedo, roughness, and metalness (with optional texture maps) drive the BRDF; emission is supported for first-hit and along the path.
 
 ### Ray–geometry
+
 - **Ray–AABB**: ray vs axis-aligned box in object space (inverse model matrix used to transform ray into model space). Used as an early reject per object before ray–triangle tests.
 - **Ray–triangle**: robust ray–triangle intersection with barycentric coordinates. Implementation uses axis permutation (largest component of the ray direction) for numerical stability and double precision for edge tests when needed (Möller–Trumbore–style).
 - **Per-object composite bounds**: each `DisplayObject` has a composite AABB over all its meshes for a single cheap reject before iterating meshes/triangles.
 
 ### Materials and shading
+
 - **TBN from UVs**: tangent and bitangent are derived from the triangle’s UV deltas; the normal is either interpolated from vertex normals or from the triangle. **Gram–Schmidt** is used to orthogonalize the tangent to the normal, then the bitangent is recomputed so the TBN matrix correctly transforms normal-map vectors to world space.
 - **Texture mapping**: albedo, normal, roughness, metalness, ambient occlusion, and emission can be driven by textures. On the GPU, materials and textures are mirrored to device memory (CUDA texture objects for sampling); the host `Material` class pushes updates via `sendToGPU()`.
 
 ### Lighting and environment
+
 - **Directional “sun”**: single directional light with configurable direction (yaw/pitch) and color/intensity, combined with a simple sky color and intensity.
 - **Ambient occlusion**: AO term (from material or default) is applied on the first hit only, scaled by a global AO intensity.
 
@@ -54,18 +60,18 @@ A C++/CUDA path tracer with an OpenGL display front-end, built to demonstrate co
 
 ## Project Structure (high level)
 
-| Area | Role |
-|------|------|
-| `main.cpp` | Creates `RenderWindow` and runs the render loop. |
-| `RenderWindow` | GLFW/OpenGL/ImGui setup, CUDA–GL interop, CPU/GPU toggle, camera/scene/material GUI, screenshot (lodepng). |
-| `Scene` | Scene graph (`DisplayObject` map); builds `GPUObjectDataVector` (model matrices, inverse, and pointers to GPU mesh/material data) for the CUDA raytracer each frame. |
-| `Camera` | Position, quaternion rotation, FOV, exposure. Precomputes primary ray directions (and uploads them as a CUDA texture when using GPU). |
-| `DisplayObject` | Transform (position/rotation/scale), composite AABB, list of meshes + material indices. Packs mesh and material pointers into `LLGPUObjectData` and uploads to GPU. |
-| `CustomModel` | Loads models via Assimp (triangulate, UVs, flip UVs); extracts materials and textures (albedo, normal, roughness, metalness, AO, emission); builds meshes and sends them to the GPU. |
-| `Material` / `GPUMaterial` | Host material with optional textures; `GPUMaterial` is the device-side mirror with CUDA texture objects. Same interface for albedo, normal, roughness, metal, AO, emission. |
+| Area                         | Role                                                                                                                                                                                                                                                                       |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `main.cpp`                   | Creates `RenderWindow` and runs the render loop.                                                                                                                                                                                                                           |
+| `RenderWindow`               | GLFW/OpenGL/ImGui setup, CUDA–GL interop, CPU/GPU toggle, camera/scene/material GUI, screenshot (lodepng).                                                                                                                                                                 |
+| `Scene`                      | Scene graph (`DisplayObject` map); builds `GPUObjectDataVector` (model matrices, inverse, and pointers to GPU mesh/material data) for the CUDA raytracer each frame.                                                                                                       |
+| `Camera`                     | Position, quaternion rotation, FOV, exposure. Precomputes primary ray directions (and uploads them as a CUDA texture when using GPU).                                                                                                                                      |
+| `DisplayObject`              | Transform (position/rotation/scale), composite AABB, list of meshes + material indices. Packs mesh and material pointers into `LLGPUObjectData` and uploads to GPU.                                                                                                        |
+| `CustomModel`                | Loads models via Assimp (triangulate, UVs, flip UVs); extracts materials and textures (albedo, normal, roughness, metalness, AO, emission); builds meshes and sends them to the GPU.                                                                                       |
+| `Material` / `GPUMaterial`   | Host material with optional textures; `GPUMaterial` is the device-side mirror with CUDA texture objects. Same interface for albedo, normal, roughness, metal, AO, emission.                                                                                                |
 | `processor/GPU/GPURaytracer` | CUDA kernel: one thread per pixel (with a small 3D block for multiple samples per pixel). Ray setup from camera texture, path loop, ray–AABB then ray–triangle, material evaluation, Cook–Torrance next direction, exposure, optional progressive blend, write to surface. |
-| `processor/CPU/CPURaytracer` | Single-threaded path tracer over the same scene/camera/settings; fills a float buffer that is then uploaded to the OpenGL texture. |
-| `linal.hpp` | Device-side `mat3`/`mat4` (column vectors) and transfer macros from GLM for use in CUDA code. |
+| `processor/CPU/CPURaytracer` | Single-threaded path tracer over the same scene/camera/settings; fills a float buffer that is then uploaded to the OpenGL texture.                                                                                                                                         |
+| `linal.hpp`                  | Device-side `mat3`/`mat4` (column vectors) and transfer macros from GLM for use in CUDA code.                                                                                                                                                                              |
 
 The GPU kernel uses **8×8×4** thread blocks: each (x,y) pixel can run up to 4 sample iterations in the z dimension; partial colors are reduced in shared memory and the final average is written by the thread with `threadIdx.z == 0`.
 
@@ -90,12 +96,12 @@ This project targets **Windows x64** and is built with **Visual Studio 2022**, *
 
 ### Prerequisites
 
-| Requirement | Notes |
-|-------------|-------|
-| **Visual Studio 2022** | Workload: *Desktop development with C++*. Include the **MSVC v143** toolset and **Windows 10/11 SDK**. |
-| **CUDA Toolkit 12.3** | Must match the version referenced in `Raytracer.vcxproj` (`CUDA 12.3.props` / `CUDA 12.3.targets`). [Download from NVIDIA](https://developer.nvidia.com/cuda-downloads). |
-| **NVIDIA GPU** | Required for GPU raytracing and CUDA–OpenGL interop. |
-| **Static libraries in `lib/`** | `glfw3.lib`, `assimp-vc143-mt.lib`, `zlibstatic.lib` (Release, x64, `/MD` runtime). |
+| Requirement                    | Notes                                                                                                                                                                    |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Visual Studio 2022**         | Workload: _Desktop development with C++_. Include the **MSVC v143** toolset and **Windows 10/11 SDK**.                                                                   |
+| **CUDA Toolkit 12.3**          | Must match the version referenced in `Raytracer.vcxproj` (`CUDA 12.3.props` / `CUDA 12.3.targets`). [Download from NVIDIA](https://developer.nvidia.com/cuda-downloads). |
+| **NVIDIA GPU**                 | Required for GPU raytracing and CUDA–OpenGL interop.                                                                                                                     |
+| **Static libraries in `lib/`** | `glfw3.lib`, `assimp-vc143-mt.lib`, `zlibstatic.lib` (Release, x64, `/MD` runtime).                                                                                      |
 
 Assimp is **not** fully vendored — you must build or obtain the `.lib` files yourself (see [Building external libraries](#building-external-libraries) below).
 
@@ -109,15 +115,15 @@ CUDA 12.3 officially supports MSVC toolsets up through early VS 2022 releases. I
 
 **Pick one approach and use the same MSVC version for the whole project and all prebuilt libs:**
 
-1. **Pin MSVC 14.39 (recommended for CUDA 12.3)**  
-   - Visual Studio Installer → **Individual components** → install **MSVC v143 - VS 2022 C++ x64/x86 build tools (v14.39-17.9)**.  
-   - Project Properties → **General** → **Platform Toolset** → select the **14.39** variant.  
+1. **Pin MSVC 14.39 (recommended for CUDA 12.3)**
+   - Visual Studio Installer → **Individual components** → install **MSVC v143 - VS 2022 C++ x64/x86 build tools (v14.39-17.9)**.
+   - Project Properties → **General** → **Platform Toolset** → select the **14.39** variant.
    - Rebuild Assimp (and any other prebuilt libs) with the same toolset.
 
-2. **Upgrade CUDA to 12.6+**  
+2. **Upgrade CUDA to 12.6+**
    - Supports newer MSVC (e.g. 14.44). Update the CUDA version in `Raytracer.vcxproj` and rebuild.
 
-3. **Override the version check (not recommended)**  
+3. **Override the version check (not recommended)**
    - Add `-allow-unsupported-compiler` to **CUDA C/C++ → Command Line → Additional Options** in the project properties.
 
 ### Building external libraries
